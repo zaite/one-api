@@ -3,10 +3,11 @@ package model
 import (
 	"fmt"
 	"one-api/common"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -14,6 +15,22 @@ import (
 )
 
 var DB *gorm.DB
+
+func SetupDB() {
+	err := InitDB()
+	if err != nil {
+		common.FatalLog("failed to initialize database: " + err.Error())
+	}
+	ChannelGroup.Load()
+	common.RootUserEmail = GetRootUserEmail()
+
+	if viper.GetBool("batch_update_enabled") {
+		common.BatchUpdateEnabled = true
+		common.BatchUpdateInterval = common.GetOrDefault("batch_update_interval", 5)
+		common.SysLog("batch update enabled with interval " + strconv.Itoa(common.BatchUpdateInterval) + "s")
+		InitBatchUpdater()
+	}
+}
 
 func createRootAccountIfNeed() error {
 	var user User
@@ -39,8 +56,8 @@ func createRootAccountIfNeed() error {
 }
 
 func chooseDB() (*gorm.DB, error) {
-	if os.Getenv("SQL_DSN") != "" {
-		dsn := os.Getenv("SQL_DSN")
+	if viper.IsSet("sql_dsn") {
+		dsn := viper.GetString("sql_dsn")
 		if strings.HasPrefix(dsn, "postgres://") {
 			// Use PostgreSQL
 			common.SysLog("using PostgreSQL as database")
@@ -61,8 +78,8 @@ func chooseDB() (*gorm.DB, error) {
 	// Use SQLite
 	common.SysLog("SQL_DSN not set, using SQLite as database")
 	common.UsingSQLite = true
-	config := fmt.Sprintf("?_busy_timeout=%d", common.SQLiteBusyTimeout)
-	return gorm.Open(sqlite.Open(common.SQLitePath+config), &gorm.Config{
+	config := fmt.Sprintf("?_busy_timeout=%d", common.GetOrDefault("sqlite_busy_timeout", 3000))
+	return gorm.Open(sqlite.Open(viper.GetString("sqlite_path")+config), &gorm.Config{
 		PrepareStmt: true, // precompile SQL
 	})
 }
@@ -70,7 +87,7 @@ func chooseDB() (*gorm.DB, error) {
 func InitDB() (err error) {
 	db, err := chooseDB()
 	if err == nil {
-		if common.DebugEnabled {
+		if viper.GetBool("debug") {
 			db = db.Debug()
 		}
 		DB = db
@@ -78,6 +95,7 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
+
 		sqlDB.SetMaxIdleConns(common.GetOrDefault("SQL_MAX_IDLE_CONNS", 100))
 		sqlDB.SetMaxOpenConns(common.GetOrDefault("SQL_MAX_OPEN_CONNS", 1000))
 		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetOrDefault("SQL_MAX_LIFETIME", 60)))
@@ -86,6 +104,10 @@ func InitDB() (err error) {
 			return nil
 		}
 		common.SysLog("database migration started")
+		// err = MigrateDB(DB)
+		// if err != nil {
+		// 	return err
+		// }
 		err = db.AutoMigrate(&Channel{})
 		if err != nil {
 			return err
@@ -118,6 +140,18 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
+		err = db.AutoMigrate(&Price{})
+		if err != nil {
+			return err
+		}
+		err = db.AutoMigrate(&Midjourney{})
+		if err != nil {
+			return err
+		}
+		err = db.AutoMigrate(&ChatCache{})
+		if err != nil {
+			return err
+		}
 		common.SysLog("database migrated")
 		err = createRootAccountIfNeed()
 		return err
@@ -126,6 +160,24 @@ func InitDB() (err error) {
 	}
 	return err
 }
+
+// func MigrateDB(db *gorm.DB) error {
+// 	if DB.Migrator().HasConstraint(&Price{}, "model") {
+// 		fmt.Println("----Price model has constraint----")
+// 		// 如果是主键，移除主键约束
+// 		err := db.Migrator().DropConstraint(&Price{}, "model")
+// 		if err != nil {
+// 			return err
+// 		}
+// 		// 修改字段长度
+// 		err = db.Migrator().AlterColumn(&Price{}, "model")
+// 		if err != nil {
+// 			return err
+// 		}
+// 	}
+
+// 	return nil
+// }
 
 func CloseDB() error {
 	sqlDB, err := DB.DB()

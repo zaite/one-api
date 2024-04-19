@@ -106,6 +106,13 @@ export async function onGitHubOAuthClicked(github_client_id, openInNewTab = fals
   }
 }
 
+export async function onLarkOAuthClicked(lark_client_id) {
+  const state = await getOAuthState();
+  if (!state) return;
+  let redirect_uri = `${window.location.origin}/oauth/lark`;
+  window.open(`https://open.feishu.cn/open-apis/authen/v1/authorize?redirect_uri=${redirect_uri}&app_id=${lark_client_id}&state=${state}`);
+}
+
 export function isAdmin() {
   let user = localStorage.getItem('user');
   if (!user) return false;
@@ -200,4 +207,24 @@ export function removeTrailingSlash(url) {
   } else {
     return url;
   }
+}
+
+export function trims(values) {
+  if (typeof values === 'string') {
+    return values.trim();
+  }
+
+  if (Array.isArray(values)) {
+    return values.map((value) => trims(value));
+  }
+
+  if (typeof values === 'object') {
+    let newValues = {};
+    for (let key in values) {
+      newValues[key] = trims(values[key]);
+    }
+    return newValues;
+  }
+
+  return values;
 }

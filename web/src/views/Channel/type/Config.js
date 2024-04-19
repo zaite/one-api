@@ -9,7 +9,8 @@ const defaultConfig = {
     test_model: '',
     model_mapping: '',
     models: [],
-    groups: ['default']
+    groups: ['default'],
+    plugin: {}
   },
   inputLabel: {
     name: '渠道名称',
@@ -31,7 +32,8 @@ const defaultConfig = {
     other: '',
     proxy: '单独设置代理地址，支持http和socks5，例如：http://127.0.0.1:1080',
     test_model: '用于测试使用的模型，为空时无法测速,如：gpt-3.5-turbo',
-    models: '请选择该渠道所支持的模型',
+    models:
+      '请选择该渠道所支持的模型,你也可以输入通配符*来匹配模型，例如：gpt-3.5*，表示支持所有gpt-3.5开头的模型，*号只能在最后一位使用，前面必须有字符，例如：gpt-3.5*是正确的，*gpt-3.5是错误的',
     model_mapping:
       '请输入要修改的模型映射关系，格式为：api请求模型ID:实际转发给渠道的模型ID，使用JSON数组表示，例如：{"gpt-3.5": "gpt-35"}',
     groups: '请选择该渠道所支持的用户组'
@@ -59,15 +61,22 @@ const typeConfig = {
   },
   14: {
     input: {
-      models: ['claude-instant-1', 'claude-2', 'claude-2.0', 'claude-2.1'],
-      test_model: 'claude-2'
+      models: [
+        'claude-instant-1.2',
+        'claude-2.0',
+        'claude-2.1',
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307'
+      ],
+      test_model: 'claude-3-haiku-20240307'
     },
     modelGroup: 'Anthropic'
   },
   15: {
     input: {
-      models: ['ERNIE-Bot', 'ERNIE-Bot-turbo', 'ERNIE-Bot-4', 'Embedding-V1'],
-      test_model: 'ERNIE-Bot'
+      models: ['ERNIE-4.0', 'ERNIE-3.5-8K', 'ERNIE-Bot-8K', 'Embedding-V1'],
+      test_model: 'ERNIE-3.5-8K'
     },
     prompt: {
       key: '按照如下格式输入：APIKey|SecretKey'
@@ -76,8 +85,8 @@ const typeConfig = {
   },
   16: {
     input: {
-      models: ['chatglm_turbo', 'chatglm_pro', 'chatglm_std', 'chatglm_lite'],
-      test_model: 'chatglm_lite'
+      models: ['glm-3-turbo', 'glm-4', 'glm-4v', 'embedding-2', 'cogview-3'],
+      test_model: 'glm-3-turbo'
     },
     modelGroup: 'Zhipu'
   },
@@ -86,17 +95,7 @@ const typeConfig = {
       other: '插件参数'
     },
     input: {
-      models: [
-        'qwen-turbo',
-        'qwen-plus',
-        'qwen-max',
-        'qwen-max-longcontext',
-        'text-embedding-v1',
-        'qwen-turbo-internet',
-        'qwen-plus-internet',
-        'qwen-max-internet',
-        'qwen-max-longcontext-internet'
-      ],
+      models: ['qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-longcontext', 'text-embedding-v1'],
       test_model: 'qwen-turbo'
     },
     prompt: {
@@ -131,8 +130,8 @@ const typeConfig = {
   },
   23: {
     input: {
-      models: ['hunyuan'],
-      test_model: 'hunyuan'
+      models: ['ChatStd', 'ChatPro'],
+      test_model: 'ChatStd'
     },
     prompt: {
       key: '按照如下格式输入：AppId|SecretId|SecretKey'
@@ -144,7 +143,7 @@ const typeConfig = {
       other: '版本号'
     },
     input: {
-      models: ['gemini-pro', 'gemini-pro-vision'],
+      models: ['gemini-pro', 'gemini-pro-vision', 'gemini-1.0-pro', 'gemini-1.5-pro'],
       test_model: 'gemini-pro'
     },
     prompt: {
@@ -164,7 +163,8 @@ const typeConfig = {
       models: ['tts-1', 'tts-1-hd']
     },
     prompt: {
-      test_model: ''
+      test_model: '',
+      base_url: '请输入请求地址，例如：https://eastasia.tts.speech.microsoft.com'
     }
   },
   27: {
@@ -174,19 +174,132 @@ const typeConfig = {
     },
     prompt: {
       key: '按照如下格式输入：APISecret|groupID'
-    }
+    },
+    modelGroup: 'MiniMax'
   },
   28: {
     input: {
       models: ['deepseek-coder', 'deepseek-chat'],
       test_model: 'deepseek-chat'
-    }
+    },
+    modelGroup: 'Deepseek'
   },
   29: {
     input: {
       models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
       test_model: 'moonshot-v1-8k'
-    }
+    },
+    modelGroup: 'Moonshot'
+  },
+  30: {
+    input: {
+      models: [
+        'open-mistral-7b',
+        'open-mixtral-8x7b',
+        'mistral-small-latest',
+        'mistral-medium-latest',
+        'mistral-large-latest',
+        'mistral-embed'
+      ],
+      test_model: 'open-mistral-7b'
+    },
+    modelGroup: 'Mistral'
+  },
+  31: {
+    input: {
+      models: ['llama2-7b-2048', 'llama2-70b-4096', 'mixtral-8x7b-32768', 'gemma-7b-it'],
+      test_model: 'llama2-7b-2048'
+    },
+    modelGroup: 'Groq'
+  },
+  32: {
+    input: {
+      models: [
+        'claude-instant-1.2',
+        'claude-2.0',
+        'claude-2.1',
+        'claude-3-opus-20240229',
+        'claude-3-sonnet-20240229',
+        'claude-3-haiku-20240307'
+      ],
+      test_model: 'claude-3-haiku-20240307'
+    },
+    prompt: {
+      key: '按照如下格式输入：Region|AccessKeyID|SecretAccessKey|SessionToken 其中SessionToken可不填空'
+    },
+    modelGroup: 'Anthropic'
+  },
+  33: {
+    input: {
+      models: ['yi-34b-chat-0205', 'yi-34b-chat-200k', 'yi-vl-plus'],
+      test_model: 'yi-34b-chat-0205'
+    },
+    modelGroup: 'Lingyiwanwu'
+  },
+  34: {
+    input: {
+      models: [
+        'mj_imagine',
+        'mj_variation',
+        'mj_reroll',
+        'mj_blend',
+        'mj_modal',
+        'mj_zoom',
+        'mj_shorten',
+        'mj_high_variation',
+        'mj_low_variation',
+        'mj_pan',
+        'mj_inpaint',
+        'mj_custom_zoom',
+        'mj_describe',
+        'mj_upscale',
+        'swap_face'
+      ]
+    },
+    prompt: {
+      key: '密钥填写midjourney-proxy的密钥，如果没有设置密钥，可以随便填',
+      base_url: '地址填写midjourney-proxy部署的地址',
+      test_model: '',
+      model_mapping: ''
+    },
+    modelGroup: 'Midjourney'
+  },
+  35: {
+    input: {
+      models: [
+        '@cf/stabilityai/stable-diffusion-xl-base-1.0',
+        '@cf/lykon/dreamshaper-8-lcm',
+        '@cf/bytedance/stable-diffusion-xl-lightning',
+        '@cf/qwen/qwen1.5-7b-chat-awq',
+        '@cf/qwen/qwen1.5-14b-chat-awq',
+        '@hf/google/gemma-7b-it',
+        '@hf/thebloke/deepseek-coder-6.7b-base-awq',
+        '@hf/thebloke/llama-2-13b-chat-awq',
+        '@cf/openai/whisper'
+      ],
+      test_model: '@hf/google/gemma-7b-it'
+    },
+    prompt: {
+      key: '按照如下格式输入：CLOUDFLARE_ACCOUNT_ID|CLOUDFLARE_API_TOKEN',
+      base_url: ''
+    },
+    modelGroup: 'Cloudflare AI'
+  },
+  36: {
+    input: {
+      models: ['command-r', 'command-r-plus'],
+      test_model: 'command-r'
+    },
+    modelGroup: 'Cohere'
+  },
+  37: {
+    input: {
+      models: ['sd3', 'sd3-turbo', 'stable-image-core']
+    },
+    prompt: {
+      test_model: ''
+    },
+    modelGroup: 'Stability AI'
   }
 };
 

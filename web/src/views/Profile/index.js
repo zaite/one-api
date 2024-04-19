@@ -8,25 +8,25 @@ import {
   OutlinedInput,
   Stack,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Divider,
   Chip,
-  Typography
+  Typography,
+  SvgIcon,
+  useMediaQuery
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import SubCard from 'ui-component/cards/SubCard';
 import { IconBrandWechat, IconBrandGithub, IconMail, IconBrandTelegram } from '@tabler/icons-react';
 import Label from 'ui-component/Label';
 import { API } from 'utils/api';
-import { showError, showSuccess, onGitHubOAuthClicked, copy } from 'utils/common';
+import { showError, showSuccess, onGitHubOAuthClicked, copy, trims, onLarkOAuthClicked } from 'utils/common';
 import * as Yup from 'yup';
 import WechatModal from 'views/Authentication/AuthForms/WechatModal';
 import { useSelector } from 'react-redux';
 import EmailModal from './component/EmailModal';
 import Turnstile from 'react-turnstile';
+import { ReactComponent as Lark } from 'assets/images/icons/lark.svg';
+import { useTheme } from '@mui/material/styles';
 
 const validationSchema = Yup.object().shape({
   username: Yup.string().required('用户名 不能为空').min(3, '用户名 不能小于 3 个字符'),
@@ -38,13 +38,14 @@ const validationSchema = Yup.object().shape({
 
 export default function Profile() {
   const [inputs, setInputs] = useState([]);
-  const [showAccountDeleteModal, setShowAccountDeleteModal] = useState(false);
   const [turnstileEnabled, setTurnstileEnabled] = useState(false);
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [openWechat, setOpenWechat] = useState(false);
   const [openEmail, setOpenEmail] = useState(false);
   const status = useSelector((state) => state.siteInfo);
+  const theme = useTheme();
+  const matchDownSM = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleWechatOpen = () => {
     setOpenWechat(true);
@@ -105,8 +106,11 @@ export default function Profile() {
 
   const submit = async () => {
     try {
-      await validationSchema.validate(inputs);
-      const res = await API.put(`/api/user/self`, inputs);
+      let inputValue = inputs;
+      inputValue.username = trims(inputValue.username);
+      inputValue.display_name = trims(inputValue.display_name);
+      await validationSchema.validate(inputValue);
+      const res = await API.put(`/api/user/self`, inputValue);
       const { success, message } = res.data;
       if (success) {
         showSuccess('用户信息更新成功！');
@@ -133,7 +137,13 @@ export default function Profile() {
       <UserCard>
         <Card sx={{ paddingTop: '20px' }}>
           <Stack spacing={2}>
-            <Stack direction="row" alignItems="center" justifyContent="center" spacing={2} sx={{ paddingBottom: '20px' }}>
+            <Stack
+              direction={matchDownSM ? 'column' : 'row'}
+              alignItems="center"
+              justifyContent="center"
+              spacing={2}
+              sx={{ paddingBottom: '20px' }}
+            >
               <Label variant="ghost" color={inputs.wechat_id ? 'primary' : 'default'}>
                 <IconBrandWechat /> {inputs.wechat_id || '未绑定'}
               </Label>
@@ -145,6 +155,9 @@ export default function Profile() {
               </Label>
               <Label variant="ghost" color={inputs.telegram_id ? 'primary' : 'default'}>
                 <IconBrandTelegram /> {inputs.telegram_id || '未绑定'}
+              </Label>
+              <Label variant="ghost" color={inputs.lark_id ? 'primary' : 'default'}>
+                <SvgIcon component={Lark} inheritViewBox="0 0 24 24" /> {inputs.lark_id || '未绑定'}
               </Label>
             </Stack>
             <SubCard title="个人信息">
@@ -211,6 +224,14 @@ export default function Profile() {
                   <Grid xs={12} md={4}>
                     <Button variant="contained" onClick={() => onGitHubOAuthClicked(status.github_client_id, true)}>
                       绑定GitHub账号
+                    </Button>
+                  </Grid>
+                )}
+
+                {status.lark_client_id && !inputs.lark_id && (
+                  <Grid xs={12} md={4}>
+                    <Button variant="contained" onClick={() => onLarkOAuthClicked(status.lark_client_id)}>
+                      绑定 飞书 账号
                     </Button>
                   </Grid>
                 )}
@@ -284,41 +305,11 @@ export default function Profile() {
                     {inputs.access_token ? '重置访问令牌' : '生成访问令牌'}
                   </Button>
                 </Grid>
-
-                <Grid xs={12}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    onClick={() => {
-                      setShowAccountDeleteModal(true);
-                    }}
-                  >
-                    删除帐号
-                  </Button>
-                </Grid>
               </Grid>
             </SubCard>
           </Stack>
         </Card>
       </UserCard>
-      <Dialog open={showAccountDeleteModal} onClose={() => setShowAccountDeleteModal(false)} maxWidth={'md'}>
-        <DialogTitle sx={{ margin: '0px', fontWeight: 500, lineHeight: '1.55556', padding: '24px', fontSize: '1.125rem' }}>
-          危险操作
-        </DialogTitle>
-        <Divider />
-        <DialogContent>您正在删除自己的帐户，将清空所有数据且不可恢复</DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowAccountDeleteModal(false)}>取消</Button>
-          <Button
-            sx={{ color: 'error.main' }}
-            onClick={async () => {
-              setShowAccountDeleteModal(false);
-            }}
-          >
-            确定
-          </Button>
-        </DialogActions>
-      </Dialog>
       <WechatModal open={openWechat} handleClose={handleWechatClose} wechatLogin={bindWeChat} qrCode={status.wechat_qrcode} />
       <EmailModal
         open={openEmail}

@@ -4,6 +4,7 @@ import (
 	"one-api/common"
 	"strings"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +14,7 @@ type Channel struct {
 	Key                string  `json:"key" form:"key" gorm:"type:varchar(767);not null;index"`
 	Status             int     `json:"status" form:"status" gorm:"default:1"`
 	Name               string  `json:"name" form:"name" gorm:"index"`
-	Weight             *uint   `json:"weight" gorm:"default:0"`
+	Weight             *uint   `json:"weight" gorm:"default:1"`
 	CreatedTime        int64   `json:"created_time" gorm:"bigint"`
 	TestTime           int64   `json:"test_time" gorm:"bigint"`
 	ResponseTime       int     `json:"response_time"` // in milliseconds
@@ -28,7 +29,11 @@ type Channel struct {
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Proxy              *string `json:"proxy" gorm:"type:varchar(255);default:''"`
 	TestModel          string  `json:"test_model" form:"test_model" gorm:"type:varchar(50);default:''"`
+
+	Plugin *datatypes.JSONType[PluginType] `json:"plugin" form:"plugin" gorm:"type:json"`
 }
+
+type PluginType map[string]map[string]interface{}
 
 var allowedChannelOrderFields = map[string]bool{
 	"id":            true,
@@ -95,17 +100,14 @@ func GetAllChannels() ([]*Channel, error) {
 func GetChannelById(id int, selectAll bool) (*Channel, error) {
 	channel := Channel{Id: id}
 	var err error = nil
-	if selectAll {
-		err = DB.First(&channel, "id = ?", id).Error
-	} else {
-		err = DB.Omit("key").First(&channel, "id = ?", id).Error
-	}
+	err = DB.First(&channel, "id = ?", id).Error
+
 	return &channel, err
 }
 
 func BatchInsertChannels(channels []Channel) error {
 	var err error
-	err = DB.Create(&channels).Error
+	err = DB.Omit("UsedQuota").Create(&channels).Error
 	if err != nil {
 		return err
 	}
@@ -115,6 +117,8 @@ func BatchInsertChannels(channels []Channel) error {
 			return err
 		}
 	}
+
+	go ChannelGroup.Load()
 	return nil
 }
 
@@ -127,6 +131,10 @@ func BatchUpdateChannelsAzureApi(params *BatchChannelsParams) (int64, error) {
 	db := DB.Model(&Channel{}).Where("id IN ?", params.Ids).Update("other", params.Value)
 	if db.Error != nil {
 		return 0, db.Error
+	}
+
+	if db.RowsAffected > 0 {
+		go ChannelGroup.Load()
 	}
 	return db.RowsAffected, nil
 }
@@ -150,8 +158,12 @@ func BatchDelModelChannels(params *BatchChannelsParams) (int64, error) {
 		}
 
 		channel.Models = strings.Join(modelsSlice, ",")
-		channel.Update()
+		channel.UpdateRaw(false)
 		count++
+	}
+
+	if count > 0 {
+		go ChannelGroup.Load()
 	}
 
 	return count, nil
@@ -180,17 +192,38 @@ func (channel *Channel) GetModelMapping() string {
 
 func (channel *Channel) Insert() error {
 	var err error
-	err = DB.Create(channel).Error
+	err = DB.Omit("UsedQuota").Create(channel).Error
 	if err != nil {
 		return err
 	}
 	err = channel.AddAbilities()
+
+	if err == nil {
+		go ChannelGroup.Load()
+	}
+
 	return err
 }
 
-func (channel *Channel) Update() error {
+func (channel *Channel) Update(overwrite bool) error {
+
+	err := channel.UpdateRaw(overwrite)
+
+	if err == nil {
+		go ChannelGroup.Load()
+	}
+
+	return err
+}
+
+func (channel *Channel) UpdateRaw(overwrite bool) error {
 	var err error
-	err = DB.Model(channel).Updates(channel).Error
+
+	if overwrite {
+		err = DB.Model(channel).Select("*").Omit("UsedQuota").Updates(channel).Error
+	} else {
+		err = DB.Model(channel).Omit("UsedQuota").Updates(channel).Error
+	}
 	if err != nil {
 		return err
 	}
@@ -226,7 +259,23 @@ func (channel *Channel) Delete() error {
 		return err
 	}
 	err = channel.DeleteAbilities()
+	if err == nil {
+		go ChannelGroup.Load()
+	}
 	return err
+}
+
+func (channel *Channel) StatusToStr() string {
+	switch channel.Status {
+	case common.ChannelStatusEnabled:
+		return "启用"
+	case common.ChannelStatusAutoDisabled:
+		return "自动禁用"
+	case common.ChannelStatusManuallyDisabled:
+		return "手动禁用"
+	}
+
+	return "禁用"
 }
 
 func UpdateChannelStatusById(id int, status int) {
@@ -237,6 +286,11 @@ func UpdateChannelStatusById(id int, status int) {
 	err = DB.Model(&Channel{}).Where("id = ?", id).Update("status", status).Error
 	if err != nil {
 		common.SysError("failed to update channel status: " + err.Error())
+	}
+
+	if err == nil {
+
+		go ChannelGroup.Load()
 	}
 }
 

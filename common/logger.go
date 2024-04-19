@@ -3,19 +3,24 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 const (
 	loggerINFO  = "INFO"
 	loggerWarn  = "WARN"
 	loggerError = "ERR"
+)
+const (
+	RequestIdKey = "X-Oneapi-Request-Id"
 )
 
 const maxLogCount = 1000000
@@ -24,25 +29,54 @@ var logCount int
 var setupLogLock sync.Mutex
 var setupLogWorking bool
 
+var defaultLogDir = "./logs"
+
 func SetupLogger() {
-	if *LogDir != "" {
-		ok := setupLogLock.TryLock()
-		if !ok {
-			log.Println("setup log is already working")
-			return
-		}
-		defer func() {
-			setupLogLock.Unlock()
-			setupLogWorking = false
-		}()
-		logPath := filepath.Join(*LogDir, fmt.Sprintf("oneapi-%s.log", time.Now().Format("20060102")))
-		fd, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Fatal("failed to open log file")
-		}
-		gin.DefaultWriter = io.MultiWriter(os.Stdout, fd)
-		gin.DefaultErrorWriter = io.MultiWriter(os.Stderr, fd)
+	logDir := getLogDir()
+	if logDir == "" {
+		return
 	}
+
+	ok := setupLogLock.TryLock()
+	if !ok {
+		log.Println("setup log is already working")
+		return
+	}
+	defer func() {
+		setupLogLock.Unlock()
+		setupLogWorking = false
+	}()
+	logPath := filepath.Join(logDir, fmt.Sprintf("oneapi-%s.log", time.Now().Format("20060102")))
+	fd, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal("failed to open log file")
+	}
+	gin.DefaultWriter = io.MultiWriter(os.Stdout, fd)
+	gin.DefaultErrorWriter = io.MultiWriter(os.Stderr, fd)
+}
+
+func getLogDir() string {
+	logDir := viper.GetString("log_dir")
+	if logDir == "" {
+		logDir = defaultLogDir
+	}
+
+	var err error
+	logDir, err = filepath.Abs(viper.GetString("log_dir"))
+	if err != nil {
+		log.Fatal(err)
+		return ""
+	}
+
+	if !IsFileExist(logDir) {
+		err = os.Mkdir(logDir, 0777)
+		if err != nil {
+			log.Fatal(err)
+			return ""
+		}
+	}
+
+	return logDir
 }
 
 func SysLog(s string) {
@@ -72,7 +106,10 @@ func logHelper(ctx context.Context, level string, msg string) {
 	if level == loggerINFO {
 		writer = gin.DefaultWriter
 	}
-	id := ctx.Value(RequestIdKey)
+	id, ok := ctx.Value(RequestIdKey).(string)
+	if !ok {
+		id = "unknown"
+	}
 	now := time.Now()
 	_, _ = fmt.Fprintf(writer, "[%s] %v | %s | %s \n", level, now.Format("2006/01/02 - 15:04:05"), id, msg)
 	logCount++ // we don't need accurate count, so no lock here

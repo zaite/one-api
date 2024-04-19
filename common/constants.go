@@ -1,8 +1,6 @@
 package common
 
 import (
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -39,6 +37,13 @@ var WeChatAuthEnabled = false
 var TurnstileCheckEnabled = false
 var RegisterEnabled = true
 
+// chat cache
+var ChatCacheEnabled = false
+var ChatCacheExpireMinute = 5 // 5 Minute
+
+// mj
+var MjNotifyEnabled = false
+
 var EmailDomainRestrictionEnabled = false
 var EmailDomainWhitelist = []string{
 	"gmail.com",
@@ -52,8 +57,7 @@ var EmailDomainWhitelist = []string{
 	"foxmail.com",
 }
 
-var DebugEnabled = os.Getenv("DEBUG") == "true"
-var MemoryCacheEnabled = os.Getenv("MEMORY_CACHE_ENABLED") == "true"
+var MemoryCacheEnabled = false
 
 var LogConsumeEnabled = true
 
@@ -65,6 +69,9 @@ var SMTPToken = ""
 
 var GitHubClientId = ""
 var GitHubClientSecret = ""
+
+var LarkClientId = ""
+var LarkClientSecret = ""
 
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
@@ -83,57 +90,23 @@ var QuotaRemindThreshold = 1000
 var PreConsumedQuota = 500
 var ApproximateTokenEnabled = false
 var RetryTimes = 0
+var DefaultChannelWeight = uint(1)
+var RetryCooldownSeconds = 5
 
 var RootUserEmail = ""
 
-var IsMasterNode = os.Getenv("NODE_TYPE") != "slave"
+var IsMasterNode = true
 
-var requestInterval, _ = strconv.Atoi(os.Getenv("POLLING_INTERVAL"))
-var RequestInterval = time.Duration(requestInterval) * time.Second
-
-var SyncFrequency = GetOrDefault("SYNC_FREQUENCY", 10*60) // unit is second
+var RequestInterval time.Duration
 
 var BatchUpdateEnabled = false
-var BatchUpdateInterval = GetOrDefault("BATCH_UPDATE_INTERVAL", 5)
-
-var RelayTimeout = GetOrDefault("RELAY_TIMEOUT", 600)   // unit is second
-var ConnectTimeout = GetOrDefault("CONNECT_TIMEOUT", 5) // unit is second
-
-const (
-	RequestIdKey = "X-Oneapi-Request-Id"
-)
+var BatchUpdateInterval = 5
 
 const (
 	RoleGuestUser  = 0
 	RoleCommonUser = 1
 	RoleAdminUser  = 10
 	RoleRootUser   = 100
-)
-
-var (
-	FileUploadPermission    = RoleGuestUser
-	FileDownloadPermission  = RoleGuestUser
-	ImageUploadPermission   = RoleGuestUser
-	ImageDownloadPermission = RoleGuestUser
-)
-
-// All duration's unit is seconds
-// Shouldn't larger then RateLimitKeyExpirationDuration
-var (
-	GlobalApiRateLimitNum            = GetOrDefault("GLOBAL_API_RATE_LIMIT", 180)
-	GlobalApiRateLimitDuration int64 = 3 * 60
-
-	GlobalWebRateLimitNum            = GetOrDefault("GLOBAL_WEB_RATE_LIMIT", 100)
-	GlobalWebRateLimitDuration int64 = 3 * 60
-
-	UploadRateLimitNum            = 10
-	UploadRateLimitDuration int64 = 60
-
-	DownloadRateLimitNum            = 10
-	DownloadRateLimitDuration int64 = 60
-
-	CriticalRateLimitNum            = 20
-	CriticalRateLimitDuration int64 = 20 * 60
 )
 
 var RateLimitKeyExpirationDuration = 20 * time.Minute
@@ -194,6 +167,14 @@ const (
 	ChannelTypeMiniMax        = 27
 	ChannelTypeDeepseek       = 28
 	ChannelTypeMoonshot       = 29
+	ChannelTypeMistral        = 30
+	ChannelTypeGroq           = 31
+	ChannelTypeBedrock        = 32
+	ChannelTypeLingyi         = 33
+	ChannelTypeMidjourney     = 34
+	ChannelTypeCloudflareAI   = 35
+	ChannelTypeCohere         = 36
+	ChannelTypeStabilityAI    = 37
 )
 
 var ChannelBaseURLs = []string{
@@ -227,6 +208,14 @@ var ChannelBaseURLs = []string{
 	"https://api.minimax.chat/v1",       //27
 	"https://api.deepseek.com",          //28
 	"https://api.moonshot.cn",           //29
+	"https://api.mistral.ai",            //30
+	"https://api.groq.com/openai",       //31
+	"",                                  //32
+	"https://api.lingyiwanwu.com",       //33
+	"",                                  //34
+	"",                                  //35
+	"https://api.cohere.ai/v1",          //36
+	"https://api.stability.ai/v2beta",   //37
 }
 
 const (

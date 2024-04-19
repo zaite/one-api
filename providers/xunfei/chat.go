@@ -75,16 +75,7 @@ func (p *XunfeiProvider) getChatRequest(request *types.ChatCompletionRequest) (*
 func (p *XunfeiProvider) convertFromChatOpenai(request *types.ChatCompletionRequest) *XunfeiChatRequest {
 	messages := make([]XunfeiMessage, 0, len(request.Messages))
 	for _, message := range request.Messages {
-		if message.Role == "system" {
-			messages = append(messages, XunfeiMessage{
-				Role:    types.ChatMessageRoleUser,
-				Content: message.StringContent(),
-			})
-			messages = append(messages, XunfeiMessage{
-				Role:    types.ChatMessageRoleAssistant,
-				Content: "Okay",
-			})
-		} else if message.Role == types.ChatMessageRoleFunction {
+		if message.Role == types.ChatMessageRoleFunction {
 			messages = append(messages, XunfeiMessage{
 				Role:    types.ChatMessageRoleUser,
 				Content: "这是函数调用返回的内容，请回答之前的问题：\n" + message.StringContent(),
@@ -256,7 +247,7 @@ func (h *xunfeiHandler) handlerStream(rawLine *[]byte, dataChan chan string, err
 		return
 	}
 
-	h.convertToOpenaiStream(xunfeiChatResponse, dataChan, errChan)
+	h.convertToOpenaiStream(xunfeiChatResponse, dataChan)
 
 	if isFinished {
 		errChan <- io.EOF
@@ -264,7 +255,7 @@ func (h *xunfeiHandler) handlerStream(rawLine *[]byte, dataChan chan string, err
 	}
 }
 
-func (h *xunfeiHandler) convertToOpenaiStream(xunfeiChatResponse *XunfeiChatResponse, dataChan chan string, errChan chan error) {
+func (h *xunfeiHandler) convertToOpenaiStream(xunfeiChatResponse *XunfeiChatResponse, dataChan chan string) {
 	if len(xunfeiChatResponse.Payload.Choices.Text) == 0 {
 		xunfeiChatResponse.Payload.Choices.Text = []XunfeiChatResponseTextItem{{}}
 	}

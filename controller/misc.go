@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"one-api/common"
+	"one-api/common/stmp"
 	"one-api/common/telegram"
 	"one-api/model"
 	"strings"
@@ -27,6 +28,7 @@ func GetStatus(c *gin.Context) {
 			"email_verification":  common.EmailVerificationEnabled,
 			"github_oauth":        common.GitHubOAuthEnabled,
 			"github_client_id":    common.GitHubClientId,
+			"lark_client_id":      common.LarkClientId,
 			"system_name":         common.SystemName,
 			"logo":                common.Logo,
 			"footer_html":         common.Footer,
@@ -40,6 +42,8 @@ func GetStatus(c *gin.Context) {
 			"quota_per_unit":      common.QuotaPerUnit,
 			"display_in_currency": common.DisplayInCurrencyEnabled,
 			"telegram_bot":        telegram_bot,
+			"mj_notify_enabled":   common.MjNotifyEnabled,
+			"chat_cache_enabled":  common.ChatCacheEnabled,
 		},
 	})
 }
@@ -108,11 +112,7 @@ func SendEmailVerification(c *gin.Context) {
 	}
 	code := common.GenerateVerificationCode(6)
 	common.RegisterVerificationCodeWithKey(email, code, common.EmailVerificationPurpose)
-	subject := fmt.Sprintf("%s邮箱验证邮件", common.SystemName)
-	content := fmt.Sprintf("<p>您好，你正在进行%s邮箱验证。</p>"+
-		"<p>您的验证码为: <strong>%s</strong></p>"+
-		"<p>验证码 %d 分钟内有效，如果不是本人操作，请忽略。</p>", common.SystemName, code, common.VerificationValidMinutes)
-	err := common.SendEmail(subject, email, content)
+	err := stmp.SendVerificationCodeEmail(email, code)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -135,22 +135,29 @@ func SendPasswordResetEmail(c *gin.Context) {
 		})
 		return
 	}
-	if !model.IsEmailAlreadyTaken(email) {
+
+	user := &model.User{
+		Email: email,
+	}
+
+	if err := user.FillUserByEmail(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "该邮箱地址未注册",
 		})
 		return
 	}
+
+	userName := user.DisplayName
+	if userName == "" {
+		userName = user.Username
+	}
+
 	code := common.GenerateVerificationCode(0)
 	common.RegisterVerificationCodeWithKey(email, code, common.PasswordResetPurpose)
 	link := fmt.Sprintf("%s/user/reset?email=%s&token=%s", common.ServerAddress, email, code)
-	subject := fmt.Sprintf("%s密码重置", common.SystemName)
-	content := fmt.Sprintf("<p>您好，你正在进行%s密码重置。</p>"+
-		"<p>点击 <a href='%s'>此处</a> 进行密码重置。</p>"+
-		"<p>如果链接无法点击，请尝试点击下面的链接或将其复制到浏览器中打开：<br> %s </p>"+
-		"<p>重置链接 %d 分钟内有效，如果不是本人操作，请忽略。</p>", common.SystemName, link, link, common.VerificationValidMinutes)
-	err := common.SendEmail(subject, email, content)
+	err := stmp.SendPasswordResetEmail(userName, email, link)
+
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -172,6 +179,14 @@ type PasswordResetRequest struct {
 func ResetPassword(c *gin.Context) {
 	var req PasswordResetRequest
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "无效的参数",
+		})
+		return
+	}
+
 	if req.Email == "" || req.Token == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

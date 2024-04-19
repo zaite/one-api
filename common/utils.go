@@ -1,8 +1,8 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
 	"html/template"
 	"log"
 	"math/rand"
@@ -13,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/spf13/viper"
 )
 
 func OpenBrowser(url string) {
@@ -184,16 +187,14 @@ func Max(a int, b int) int {
 	}
 }
 
-func GetOrDefault(env string, defaultValue int) int {
-	if env == "" || os.Getenv(env) == "" {
-		return defaultValue
+func GetOrDefault[T any](env string, defaultValue T) T {
+	if viper.IsSet(env) {
+		value := viper.Get(env)
+		if v, ok := value.(T); ok {
+			return v
+		}
 	}
-	num, err := strconv.Atoi(os.Getenv(env))
-	if err != nil {
-		SysError(fmt.Sprintf("failed to parse %s: %s, using default value: %d", env, err.Error(), defaultValue))
-		return defaultValue
-	}
-	return num
+	return defaultValue
 }
 
 func MessageWithRequestId(message string, id string) string {
@@ -206,4 +207,58 @@ func String2Int(str string) int {
 		return 0
 	}
 	return num
+}
+
+func IsFileExist(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil || os.IsExist(err)
+}
+
+func Contains[T comparable](value T, slice []T) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}
+
+func Filter[T any](arr []T, f func(T) bool) []T {
+	var res []T
+	for _, v := range arr {
+		if f(v) {
+			res = append(res, v)
+		}
+	}
+	return res
+}
+
+func GetModelsWithMatch(modelList *[]string, modelName string) string {
+	for _, model := range *modelList {
+		if strings.HasPrefix(modelName, strings.TrimRight(model, "*")) {
+			return model
+		}
+	}
+	return ""
+}
+
+func EscapeMarkdownText(text string) string {
+	chars := []string{"_", "*", "[", "]", "(", ")", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!", "`"}
+	for _, char := range chars {
+		text = strings.ReplaceAll(text, char, "\\"+char)
+	}
+	return text
+}
+
+func UnmarshalString[T interface{}](data string) (form T, err error) {
+	err = json.Unmarshal([]byte(data), &form)
+	return form, err
+}
+
+func Marshal[T interface{}](data T) string {
+	res, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return string(res)
 }

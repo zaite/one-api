@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { showError } from 'utils/common';
+import { showError, trims } from 'utils/common';
 
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -28,7 +28,7 @@ export default function Log() {
     model_name: '',
     start_timestamp: 0,
     end_timestamp: dayjs().unix() + 3600,
-    type: 0,
+    log_type: 0,
     channel: ''
   };
 
@@ -74,6 +74,7 @@ export default function Log() {
   const fetchData = useCallback(
     async (page, rowsPerPage, keyword, order, orderBy) => {
       setSearching(true);
+      keyword = trims(keyword);
       try {
         if (orderBy) {
           orderBy = order === 'desc' ? '-' + orderBy : orderBy;
@@ -194,16 +195,17 @@ export default function Log() {
                   {
                     id: 'duration',
                     label: '耗时',
+                    tooltip: 't/s：输出令牌的数量除以总生成时间，表示生成速度',
                     disableSort: true
                   },
                   {
                     id: 'message',
-                    label: '提示',
+                    label: '输入',
                     disableSort: true
                   },
                   {
                     id: 'completion',
-                    label: '补全',
+                    label: '输出',
                     disableSort: true
                   },
                   {

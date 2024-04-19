@@ -3,6 +3,7 @@ package router
 import (
 	"one-api/controller"
 	"one-api/middleware"
+	"one-api/relay"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -17,11 +18,14 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/status", controller.GetStatus)
 		apiRouter.GET("/notice", controller.GetNotice)
 		apiRouter.GET("/about", controller.GetAbout)
+		apiRouter.GET("/prices", middleware.PricesAuth(), middleware.CORS(), controller.GetPricesList)
+		apiRouter.GET("/ownedby", relay.GetModelOwnedBy)
 		apiRouter.GET("/home_page_content", controller.GetHomePageContent)
 		apiRouter.GET("/verification", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendEmailVerification)
 		apiRouter.GET("/reset_password", middleware.CriticalRateLimit(), middleware.TurnstileCheck(), controller.SendPasswordResetEmail)
 		apiRouter.POST("/user/reset", middleware.CriticalRateLimit(), controller.ResetPassword)
 		apiRouter.GET("/oauth/github", middleware.CriticalRateLimit(), controller.GitHubOAuth)
+		apiRouter.GET("/oauth/lark", middleware.CriticalRateLimit(), controller.LarkOAuth)
 		apiRouter.GET("/oauth/state", middleware.CriticalRateLimit(), controller.GenerateOAuthCode)
 		apiRouter.GET("/oauth/wechat", middleware.CriticalRateLimit(), controller.WeChatAuth)
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), controller.WeChatBind)
@@ -39,11 +43,11 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.GET("/dashboard", controller.GetUserDashboard)
 				selfRoute.GET("/self", controller.GetSelf)
 				selfRoute.PUT("/self", controller.UpdateSelf)
-				selfRoute.DELETE("/self", controller.DeleteSelf)
+				// selfRoute.DELETE("/self", controller.DeleteSelf)
 				selfRoute.GET("/token", controller.GenerateAccessToken)
 				selfRoute.GET("/aff", controller.GetAffCode)
 				selfRoute.POST("/topup", controller.TopUp)
-				selfRoute.GET("/models", controller.ListModels)
+				selfRoute.GET("/models", relay.ListModels)
 			}
 
 			adminRoute := userRoute.Group("/")
@@ -73,7 +77,7 @@ func SetApiRouter(router *gin.Engine) {
 		channelRoute.Use(middleware.AdminAuth())
 		{
 			channelRoute.GET("/", controller.GetChannelsList)
-			channelRoute.GET("/models", controller.ListModelsForAdmin)
+			channelRoute.GET("/models", relay.ListModelsForAdmin)
 			channelRoute.GET("/:id", controller.GetChannel)
 			channelRoute.GET("/test", controller.TestAllChannels)
 			channelRoute.GET("/test/:id", controller.TestChannel)
@@ -128,6 +132,23 @@ func SetApiRouter(router *gin.Engine) {
 			analyticsRoute.GET("/channel_period", controller.GetChannelExpensesByPeriod)
 			analyticsRoute.GET("/redemption_period", controller.GetRedemptionStatisticsByPeriod)
 		}
+
+		pricesRoute := apiRouter.Group("/prices")
+		pricesRoute.Use(middleware.AdminAuth())
+		{
+			pricesRoute.GET("/model_list", controller.GetAllModelList)
+			pricesRoute.POST("/single", controller.AddPrice)
+			pricesRoute.PUT("/single/*model", controller.UpdatePrice)
+			pricesRoute.DELETE("/single/*model", controller.DeletePrice)
+			pricesRoute.POST("/multiple", controller.BatchSetPrices)
+			pricesRoute.PUT("/multiple/delete", controller.BatchDeletePrices)
+			pricesRoute.POST("/sync", controller.SyncPricing)
+
+		}
+
+		mjRoute := apiRouter.Group("/mj")
+		mjRoute.GET("/self", middleware.UserAuth(), controller.GetUserMidjourney)
+		mjRoute.GET("/", middleware.AdminAuth(), controller.GetAllMidjourney)
 	}
 
 }

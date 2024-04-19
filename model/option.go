@@ -27,10 +27,6 @@ func GetOption(key string) (option Option, err error) {
 func InitOptionMap() {
 	common.OptionMapRWMutex.Lock()
 	common.OptionMap = make(map[string]string)
-	common.OptionMap["FileUploadPermission"] = strconv.Itoa(common.FileUploadPermission)
-	common.OptionMap["FileDownloadPermission"] = strconv.Itoa(common.FileDownloadPermission)
-	common.OptionMap["ImageUploadPermission"] = strconv.Itoa(common.ImageUploadPermission)
-	common.OptionMap["ImageDownloadPermission"] = strconv.Itoa(common.ImageDownloadPermission)
 	common.OptionMap["PasswordLoginEnabled"] = strconv.FormatBool(common.PasswordLoginEnabled)
 	common.OptionMap["PasswordRegisterEnabled"] = strconv.FormatBool(common.PasswordRegisterEnabled)
 	common.OptionMap["EmailVerificationEnabled"] = strconv.FormatBool(common.EmailVerificationEnabled)
@@ -71,33 +67,20 @@ func InitOptionMap() {
 	common.OptionMap["QuotaForInvitee"] = strconv.Itoa(common.QuotaForInvitee)
 	common.OptionMap["QuotaRemindThreshold"] = strconv.Itoa(common.QuotaRemindThreshold)
 	common.OptionMap["PreConsumedQuota"] = strconv.Itoa(common.PreConsumedQuota)
-	common.OptionMap["ModelRatio"] = common.ModelRatio2JSONString()
 	common.OptionMap["GroupRatio"] = common.GroupRatio2JSONString()
 	common.OptionMap["TopUpLink"] = common.TopUpLink
 	common.OptionMap["ChatLink"] = common.ChatLink
 	common.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(common.QuotaPerUnit, 'f', -1, 64)
 	common.OptionMap["RetryTimes"] = strconv.Itoa(common.RetryTimes)
+	common.OptionMap["RetryCooldownSeconds"] = strconv.Itoa(common.RetryCooldownSeconds)
+
+	common.OptionMap["MjNotifyEnabled"] = strconv.FormatBool(common.MjNotifyEnabled)
+
+	common.OptionMap["ChatCacheEnabled"] = strconv.FormatBool(common.ChatCacheEnabled)
+	common.OptionMap["ChatCacheExpireMinute"] = strconv.Itoa(common.ChatCacheExpireMinute)
+
 	common.OptionMapRWMutex.Unlock()
-	initModelRatio()
 	loadOptionsFromDatabase()
-}
-
-func initModelRatio() {
-	// 查询数据库中的ModelRatio
-	option, err := GetOption("ModelRatio")
-	if err != nil || option.Value == "" {
-		return
-	}
-
-	newModelRatio, err := common.MergeModelRatioByJSONString(option.Value)
-	if err != nil || newModelRatio == "" {
-		return
-	}
-
-	// 更新数据库中的ModelRatio
-	common.SysLog("update ModelRatio")
-	UpdateOption("ModelRatio", newModelRatio)
-
 }
 
 func loadOptionsFromDatabase() {
@@ -135,17 +118,15 @@ func UpdateOption(key string, value string) error {
 }
 
 var optionIntMap = map[string]*int{
-	"FileUploadPermission":    &common.FileUploadPermission,
-	"FileDownloadPermission":  &common.FileDownloadPermission,
-	"ImageUploadPermission":   &common.ImageUploadPermission,
-	"ImageDownloadPermission": &common.ImageDownloadPermission,
-	"SMTPPort":                &common.SMTPPort,
-	"QuotaForNewUser":         &common.QuotaForNewUser,
-	"QuotaForInviter":         &common.QuotaForInviter,
-	"QuotaForInvitee":         &common.QuotaForInvitee,
-	"QuotaRemindThreshold":    &common.QuotaRemindThreshold,
-	"PreConsumedQuota":        &common.PreConsumedQuota,
-	"RetryTimes":              &common.RetryTimes,
+	"SMTPPort":              &common.SMTPPort,
+	"QuotaForNewUser":       &common.QuotaForNewUser,
+	"QuotaForInviter":       &common.QuotaForInviter,
+	"QuotaForInvitee":       &common.QuotaForInvitee,
+	"QuotaRemindThreshold":  &common.QuotaRemindThreshold,
+	"PreConsumedQuota":      &common.PreConsumedQuota,
+	"RetryTimes":            &common.RetryTimes,
+	"RetryCooldownSeconds":  &common.RetryCooldownSeconds,
+	"ChatCacheExpireMinute": &common.ChatCacheExpireMinute,
 }
 
 var optionBoolMap = map[string]*bool{
@@ -163,6 +144,8 @@ var optionBoolMap = map[string]*bool{
 	"LogConsumeEnabled":              &common.LogConsumeEnabled,
 	"DisplayInCurrencyEnabled":       &common.DisplayInCurrencyEnabled,
 	"DisplayTokenStatEnabled":        &common.DisplayTokenStatEnabled,
+	"MjNotifyEnabled":                &common.MjNotifyEnabled,
+	"ChatCacheEnabled":               &common.ChatCacheEnabled,
 }
 
 var optionStringMap = map[string]*string{
@@ -183,6 +166,8 @@ var optionStringMap = map[string]*string{
 	"TurnstileSecretKey":          &common.TurnstileSecretKey,
 	"TopUpLink":                   &common.TopUpLink,
 	"ChatLink":                    &common.ChatLink,
+	"LarkClientId":                &common.LarkClientId,
+	"LarkClientSecret":            &common.LarkClientSecret,
 }
 
 func updateOptionMap(key string, value string) (err error) {
@@ -207,8 +192,6 @@ func updateOptionMap(key string, value string) (err error) {
 	switch key {
 	case "EmailDomainWhitelist":
 		common.EmailDomainWhitelist = strings.Split(value, ",")
-	case "ModelRatio":
-		err = common.UpdateModelRatioByJSONString(value)
 	case "GroupRatio":
 		err = common.UpdateGroupRatioByJSONString(value)
 	case "ChannelDisableThreshold":

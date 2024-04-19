@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import SubCard from 'ui-component/cards/SubCard';
-import { Stack, FormControl, InputLabel, OutlinedInput, Checkbox, Button, FormControlLabel, TextField, Alert, Switch } from '@mui/material';
+import { Stack, FormControl, InputLabel, OutlinedInput, Checkbox, Button, FormControlLabel, TextField } from '@mui/material';
 import { showSuccess, showError, verifyJSON } from 'utils/common';
 import { API } from 'utils/api';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import ModelRationDataGrid from './ModelRationDataGrid';
 import dayjs from 'dayjs';
 require('dayjs/locale/zh-cn');
 
@@ -18,7 +17,6 @@ const OperationSetting = () => {
     QuotaForInvitee: 0,
     QuotaRemindThreshold: 0,
     PreConsumedQuota: 0,
-    ModelRatio: '',
     GroupRatio: '',
     TopUpLink: '',
     ChatLink: '',
@@ -30,10 +28,13 @@ const OperationSetting = () => {
     DisplayInCurrencyEnabled: '',
     DisplayTokenStatEnabled: '',
     ApproximateTokenEnabled: '',
-    RetryTimes: 0
+    RetryTimes: 0,
+    RetryCooldownSeconds: 0,
+    MjNotifyEnabled: '',
+    ChatCacheEnabled: '',
+    ChatCacheExpireMinute: 5
   });
   const [originInputs, setOriginInputs] = useState({});
-  const [newModelRatioView, setNewModelRatioView] = useState(false);
   let [loading, setLoading] = useState(false);
   let [historyTimestamp, setHistoryTimestamp] = useState(now.getTime() / 1000 - 30 * 24 * 3600); // a month ago new Date().getTime() / 1000 + 3600
 
@@ -44,7 +45,7 @@ const OperationSetting = () => {
       if (success) {
         let newInputs = {};
         data.forEach((item) => {
-          if (item.key === 'ModelRatio' || item.key === 'GroupRatio') {
+          if (item.key === 'GroupRatio') {
             item.value = JSON.stringify(JSON.parse(item.value), null, 2);
           }
           newInputs[item.key] = item.value;
@@ -109,13 +110,6 @@ const OperationSetting = () => {
         }
         break;
       case 'ratio':
-        if (originInputs['ModelRatio'] !== inputs.ModelRatio) {
-          if (!verifyJSON(inputs.ModelRatio)) {
-            showError('模型倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('ModelRatio', inputs.ModelRatio);
-        }
         if (originInputs['GroupRatio'] !== inputs.GroupRatio) {
           if (!verifyJSON(inputs.GroupRatio)) {
             showError('分组倍率不是合法的 JSON 字符串');
@@ -139,6 +133,11 @@ const OperationSetting = () => {
         }
         break;
       case 'general':
+        if (inputs.QuotaPerUnit < 0 || inputs.RetryTimes < 0 || inputs.RetryCooldownSeconds < 0) {
+          showError('单位额度、重试次数、冷却时间不能为负数');
+          return;
+        }
+
         if (originInputs['TopUpLink'] !== inputs.TopUpLink) {
           await updateOption('TopUpLink', inputs.TopUpLink);
         }
@@ -150,6 +149,14 @@ const OperationSetting = () => {
         }
         if (originInputs['RetryTimes'] !== inputs.RetryTimes) {
           await updateOption('RetryTimes', inputs.RetryTimes);
+        }
+        if (originInputs['RetryCooldownSeconds'] !== inputs.RetryCooldownSeconds) {
+          await updateOption('RetryCooldownSeconds', inputs.RetryCooldownSeconds);
+        }
+        break;
+      case 'other':
+        if (originInputs['ChatCacheExpireMinute'] !== inputs.ChatCacheExpireMinute) {
+          await updateOption('ChatCacheExpireMinute', inputs.ChatCacheExpireMinute);
         }
         break;
     }
@@ -224,6 +231,18 @@ const OperationSetting = () => {
                 disabled={loading}
               />
             </FormControl>
+            <FormControl fullWidth>
+              <InputLabel htmlFor="RetryCooldownSeconds">重试间隔(秒)</InputLabel>
+              <OutlinedInput
+                id="RetryCooldownSeconds"
+                name="RetryCooldownSeconds"
+                value={inputs.RetryCooldownSeconds}
+                onChange={handleInputChange}
+                label="重试间隔(秒)"
+                placeholder="重试间隔(秒)"
+                disabled={loading}
+              />
+            </FormControl>
           </Stack>
           <Stack
             direction={{ sm: 'column', md: 'row' }}
@@ -264,6 +283,49 @@ const OperationSetting = () => {
             }}
           >
             保存通用设置
+          </Button>
+        </Stack>
+      </SubCard>
+      <SubCard title="其他设置">
+        <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
+          <Stack
+            direction={{ sm: 'column', md: 'row' }}
+            spacing={{ xs: 3, sm: 2, md: 4 }}
+            justifyContent="flex-start"
+            alignItems="flex-start"
+          >
+            <FormControlLabel
+              sx={{ marginLeft: '0px' }}
+              label="Midjourney 允许回调（会泄露服务器ip地址）"
+              control={<Checkbox checked={inputs.MjNotifyEnabled === 'true'} onChange={handleInputChange} name="MjNotifyEnabled" />}
+            />
+            <FormControlLabel
+              sx={{ marginLeft: '0px' }}
+              label="是否开启聊天缓存(如果没有启用Redis，将会存储在数据库中)"
+              control={<Checkbox checked={inputs.ChatCacheEnabled === 'true'} onChange={handleInputChange} name="ChatCacheEnabled" />}
+            />
+          </Stack>
+          <Stack direction={{ sm: 'column', md: 'row' }} spacing={{ xs: 3, sm: 2, md: 4 }}>
+            <FormControl>
+              <InputLabel htmlFor="ChatCacheExpireMinute">缓存时间(分钟)</InputLabel>
+              <OutlinedInput
+                id="ChatCacheExpireMinute"
+                name="ChatCacheExpireMinute"
+                value={inputs.ChatCacheExpireMinute}
+                onChange={handleInputChange}
+                label="缓存时间(分钟)"
+                placeholder="开启缓存时，数据缓存的时间"
+                disabled={loading}
+              />
+            </FormControl>
+          </Stack>
+          <Button
+            variant="contained"
+            onClick={() => {
+              submitConfig('other').then();
+            }}
+          >
+            保存其他设置
           </Button>
         </Stack>
       </SubCard>
@@ -448,44 +510,6 @@ const OperationSetting = () => {
             />
           </FormControl>
 
-          <FormControl fullWidth>
-            <Alert severity="info">
-              配置格式为 JSON 文本，键为模型名称；值第一位为输入倍率，第二位为完成倍率，如果只有单一倍率则两者值相同。
-              <br /> <b>美元</b>：1 === $0.002 / 1K tokens <b>人民币</b>： 1 === ￥0.014 / 1k tokens
-              <br /> <b>例如</b>：<br /> gpt-4 输入： $0.03 / 1K tokens 完成：$0.06 / 1K tokens <br />
-              0.03 / 0.002 = 15, 0.06 / 0.002 = 30，即输入倍率为 15，完成倍率为 30
-            </Alert>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={newModelRatioView}
-                  onChange={() => {
-                    setNewModelRatioView(!newModelRatioView);
-                  }}
-                />
-              }
-              label="使用新编辑器"
-            />
-          </FormControl>
-
-          {newModelRatioView ? (
-            <ModelRationDataGrid ratio={inputs.ModelRatio} onChange={handleInputChange} />
-          ) : (
-            <FormControl fullWidth>
-              <TextField
-                multiline
-                maxRows={15}
-                id="channel-ModelRatio-label"
-                label="模型倍率"
-                value={inputs.ModelRatio}
-                name="ModelRatio"
-                onChange={handleInputChange}
-                aria-describedby="helper-text-channel-ModelRatio-label"
-                minRows={5}
-                placeholder="为一个 JSON 文本，键为模型名称，值为倍率"
-              />
-            </FormControl>
-          )}
           <Button
             variant="contained"
             onClick={() => {

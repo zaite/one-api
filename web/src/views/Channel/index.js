@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { showError, showSuccess, showInfo } from 'utils/common';
+import { showError, showSuccess, showInfo, trims } from 'utils/common';
 
 import { useTheme } from '@mui/material/styles';
 import Table from '@mui/material/Table';
@@ -11,6 +11,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Alert from '@mui/material/Alert';
 
 import { Button, IconButton, Card, Box, Stack, Container, Typography, Divider } from '@mui/material';
 import ChannelTableRow from './component/TableRow';
@@ -116,6 +117,19 @@ export default function ChannelPage() {
 
     try {
       switch (action) {
+        case 'copy': {
+          let oldRes = await API.get(`/api/channel/${id}`);
+          const { success, message, data } = oldRes.data;
+          if (!success) {
+            showError(message);
+            return;
+          }
+          // 删除 data.id
+          delete data.id;
+          data.name = data.name + '_copy';
+          res = await API.post(`/api/channel/`, { ...data });
+          break;
+        }
         case 'delete':
           res = await API.delete(url + id);
           break;
@@ -134,14 +148,25 @@ export default function ChannelPage() {
             priority: parseInt(value)
           });
           break;
+        case 'weight':
+          if (value === '') {
+            return;
+          }
+          res = await API.put(url, {
+            ...data,
+            weight: parseInt(value)
+          });
+          break;
         case 'test':
-          res = await API.get(url + `test/${id}`);
+          res = await API.get(url + `test/${id}`, {
+            params: { model: value }
+          });
           break;
       }
       const { success, message } = res.data;
       if (success) {
         showSuccess('操作成功完成！');
-        if (action === 'delete') {
+        if (action === 'delete' || action === 'copy') {
           await handleRefresh();
         }
       } else {
@@ -231,6 +256,7 @@ export default function ChannelPage() {
 
   const fetchData = async (page, rowsPerPage, keyword, order, orderBy) => {
     setSearching(true);
+    keyword = trims(keyword);
     const data = await fetchChannelData(page, rowsPerPage, keyword, order, orderBy);
 
     if (data) {
@@ -271,6 +297,20 @@ export default function ChannelPage() {
           </Button>
         </ButtonGroup>
       </Stack>
+      <Stack mb={5}>
+        <Alert severity="info">
+          优先级/权重解释：
+          <br />
+          1. 优先级越大，越优先使用；(只有该优先级下的节点都冻结或者禁用了，才会使用低优先级的节点)
+          <br />
+          2. 相同优先级下：根据权重进行负载均衡(加权随机)
+          <br />
+          3. 如果在设置-通用设置中设置了“重试次数”和“重试间隔”，则会在失败后重试。
+          <br />
+          4.
+          重试逻辑：1）先在高优先级中的节点重试，如果高优先级中的节点都冻结了，才会在低优先级中的节点重试。2）如果设置了“重试间隔”，则某一渠道失败后，会冻结一段时间，所有人都不会再使用这个渠道，直到冻结时间结束。3）重试次数用完后，直接结束。
+        </Alert>
+      </Stack>
       <Card>
         <Box component="form" noValidate>
           <TableToolBar filterName={toolBarValue} handleFilterName={handleToolBarValue} groupOptions={groupOptions} />
@@ -295,7 +335,7 @@ export default function ChannelPage() {
                   搜索
                 </Button>
                 <Button onClick={testAllChannels} startIcon={<IconBrandSpeedtest width={'18px'} />}>
-                  测试启用渠道
+                  测试所有渠道
                 </Button>
                 <Button onClick={updateAllChannelsBalance} startIcon={<IconCoinYuan width={'18px'} />}>
                   更新启用余额
@@ -340,15 +380,17 @@ export default function ChannelPage() {
                 orderBy={orderBy}
                 onRequestSort={handleSort}
                 headLabel={[
-                  { id: 'collapse', label: '', disableSort: true },
-                  { id: 'id', label: 'ID', disableSort: false },
+                  { id: 'collapse', label: '', disableSort: true, width: '50px' },
+                  { id: 'id', label: 'ID', disableSort: false, width: '80px' },
                   { id: 'name', label: '名称', disableSort: false },
                   { id: 'group', label: '分组', disableSort: true },
                   { id: 'type', label: '类型', disableSort: false },
                   { id: 'status', label: '状态', disableSort: false },
                   { id: 'response_time', label: '响应时间', disableSort: false },
                   { id: 'balance', label: '余额', disableSort: false },
-                  { id: 'priority', label: '优先级', disableSort: false },
+                  { id: 'used', label: '已使用', disableSort: false },
+                  { id: 'priority', label: '优先级', disableSort: false, width: '80px' },
+                  { id: 'weight', label: '权重', disableSort: false, width: '80px' },
                   { id: 'action', label: '操作', disableSort: true }
                 ]}
               />

@@ -10,7 +10,10 @@ import {
   IconUser,
   IconUserScan,
   IconActivity,
-  IconBrandTelegram
+  IconBrandTelegram,
+  IconReceipt2,
+  IconBrush,
+  IconBrandGithubCopilot
 } from '@tabler/icons-react';
 
 // constant
@@ -25,7 +28,10 @@ const icons = {
   IconUser,
   IconUserScan,
   IconActivity,
-  IconBrandTelegram
+  IconBrandTelegram,
+  IconReceipt2,
+  IconBrush,
+  IconBrandGithubCopilot
 };
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
@@ -95,6 +101,14 @@ const panel = {
       breadcrumbs: false
     },
     {
+      id: 'midjourney',
+      title: 'Midjourney',
+      type: 'item',
+      url: '/panel/midjourney',
+      icon: icons.IconBrush,
+      breadcrumbs: false
+    },
+    {
       id: 'user',
       title: '用户',
       type: 'item',
@@ -109,6 +123,24 @@ const panel = {
       type: 'item',
       url: '/panel/profile',
       icon: icons.IconUserScan,
+      breadcrumbs: false,
+      isAdmin: true
+    },
+    {
+      id: 'pricing',
+      title: '模型价格',
+      type: 'item',
+      url: '/panel/pricing',
+      icon: icons.IconReceipt2,
+      breadcrumbs: false,
+      isAdmin: true
+    },
+    {
+      id: 'model_price',
+      title: '可用模型',
+      type: 'item',
+      url: '/panel/model_price',
+      icon: icons.IconBrandGithubCopilot,
       breadcrumbs: false,
       isAdmin: true
     },
