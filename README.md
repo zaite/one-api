@@ -1,3 +1,7 @@
+<p align="right">
+   <strong>中文</strong> | <a href="./README.en.md">English</a>
+</p>
+
 <p align="center">
    <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/MartialBE/one-api/assets/42402987/c4125d1a-5577-446d-ba15-2a71c52140c1">
@@ -88,6 +92,8 @@ _本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开�
 | [Midjourney](https://www.midjourney.com/)                             | -                        | -          | -      | -           | [midjourney-proxy](https://github.com/novicezk/midjourney-proxy) |
 | [Cohere](https://cohere.com/)                                         | ✅                       | -          | -      | -           | -                                                                |
 | [Stability AI](https://platform.stability.ai/account/credits)         | -                        | -          | -      | ⚠️ 图片生成 | -                                                                |
+| [Coze](https://www.coze.com/open/docs/chat?_lang=zh)                  | ✅                       | -          | -      | -           | -                                                                |
+| [Ollama](https://github.com/ollama/ollama)                            | ✅                       | ✅         | -      | -           | -                                                                |
 
 ## 感谢
 

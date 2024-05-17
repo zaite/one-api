@@ -10,7 +10,8 @@ const defaultConfig = {
     model_mapping: '',
     models: [],
     groups: ['default'],
-    plugin: {}
+    plugin: {},
+    only_chat: false
   },
   inputLabel: {
     name: '渠道名称',
@@ -22,7 +23,9 @@ const defaultConfig = {
     test_model: '测速模型',
     models: '模型',
     model_mapping: '模型映射关系',
-    groups: '用户组'
+    groups: '用户组',
+    only_chat: '仅支持聊天',
+    provider_models_list: ''
   },
   prompt: {
     type: '请选择渠道类型',
@@ -36,12 +39,24 @@ const defaultConfig = {
       '请选择该渠道所支持的模型,你也可以输入通配符*来匹配模型，例如：gpt-3.5*，表示支持所有gpt-3.5开头的模型，*号只能在最后一位使用，前面必须有字符，例如：gpt-3.5*是正确的，*gpt-3.5是错误的',
     model_mapping:
       '请输入要修改的模型映射关系，格式为：api请求模型ID:实际转发给渠道的模型ID，使用JSON数组表示，例如：{"gpt-3.5": "gpt-35"}',
-    groups: '请选择该渠道所支持的用户组'
+    groups: '请选择该渠道所支持的用户组',
+    only_chat: '如果选择了仅支持聊天，那么遇到有函数调用的请求会跳过该渠道',
+    provider_models_list: '必须填写所有数据后才能获取模型列表'
   },
   modelGroup: 'OpenAI'
 };
 
 const typeConfig = {
+  1: {
+    inputLabel: {
+      provider_models_list: '从OpenAI获取模型列表'
+    }
+  },
+  8: {
+    inputLabel: {
+      provider_models_list: '从渠道获取模型列表'
+    }
+  },
   3: {
     inputLabel: {
       base_url: 'AZURE_OPENAI_ENDPOINT',
@@ -140,7 +155,8 @@ const typeConfig = {
   },
   25: {
     inputLabel: {
-      other: '版本号'
+      other: '版本号',
+      provider_models_list: '从Gemini获取模型列表'
     },
     input: {
       models: ['gemini-pro', 'gemini-pro-vision', 'gemini-1.0-pro', 'gemini-1.5-pro'],
@@ -159,12 +175,16 @@ const typeConfig = {
     modelGroup: 'Baichuan'
   },
   24: {
+    inputLabel: {
+      other: '位置/区域'
+    },
     input: {
       models: ['tts-1', 'tts-1-hd']
     },
     prompt: {
       test_model: '',
-      base_url: '请输入请求地址，例如：https://eastasia.tts.speech.microsoft.com'
+      base_url: '',
+      other: '请输入你 Speech Studio 的位置/区域，例如：eastasia'
     }
   },
   27: {
@@ -181,6 +201,9 @@ const typeConfig = {
     input: {
       models: ['deepseek-coder', 'deepseek-chat'],
       test_model: 'deepseek-chat'
+    },
+    inputLabel: {
+      provider_models_list: '从Deepseek获取模型列表'
     },
     modelGroup: 'Deepseek'
   },
@@ -203,12 +226,18 @@ const typeConfig = {
       ],
       test_model: 'open-mistral-7b'
     },
+    inputLabel: {
+      provider_models_list: '从Mistral获取模型列表'
+    },
     modelGroup: 'Mistral'
   },
   31: {
     input: {
       models: ['llama2-7b-2048', 'llama2-70b-4096', 'mixtral-8x7b-32768', 'gemma-7b-it'],
       test_model: 'llama2-7b-2048'
+    },
+    inputLabel: {
+      provider_models_list: '从Groq获取模型列表'
     },
     modelGroup: 'Groq'
   },
@@ -290,6 +319,9 @@ const typeConfig = {
       models: ['command-r', 'command-r-plus'],
       test_model: 'command-r'
     },
+    inputLabel: {
+      provider_models_list: '从Cohere获取模型列表'
+    },
     modelGroup: 'Cohere'
   },
   37: {
@@ -300,6 +332,26 @@ const typeConfig = {
       test_model: ''
     },
     modelGroup: 'Stability AI'
+  },
+  38: {
+    input: {
+      models: ['coze-*']
+    },
+    prompt: {
+      models: '模型名称为coze-{bot_id}，你也可以直接使用 coze-* 通配符来匹配所有coze开头的模型',
+      model_mapping:
+        '模型名称映射， 你可以取一个容易记忆的名字来代替coze-{bot_id}，例如：{"coze-translate": "coze-xxxxx"},注意：如果使用了模型映射，那么上面的模型名称必须使用映射前的名称，上述例子中，你应该在模型中填入coze-translate(如果已经使用了coze-*，可以忽略)。'
+    },
+    modelGroup: 'Coze'
+  },
+  39: {
+    input: {
+      models: ['phi3', 'llama3']
+    },
+    prompt: {
+      base_url: '请输入你部署的Ollama地址，例如：http://127.0.0.1:11434，如果你使用了cloudflare Zero Trust，可以在下方插件填入授权信息',
+      key: '请随意填写'
+    }
   }
 };
 

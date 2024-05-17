@@ -78,7 +78,8 @@ func GetProvider(c *gin.Context, modeName string) (provider providersBase.Provid
 
 func fetchChannel(c *gin.Context, modelName string) (channel *model.Channel, fail error) {
 	channelId := c.GetInt("specific_channel_id")
-	if channelId > 0 {
+	ignore := c.GetBool("specific_channel_id_ignore")
+	if channelId > 0 && !ignore {
 		return fetchChannelById(channelId)
 	}
 
@@ -99,7 +100,17 @@ func fetchChannelById(channelId int) (*model.Channel, error) {
 
 func fetchChannelByModel(c *gin.Context, modelName string) (*model.Channel, error) {
 	group := c.GetString("group")
-	channel, err := model.ChannelGroup.Next(group, modelName)
+	skip_channel_id := c.GetInt("skip_channel_id")
+	skip_only_chat := c.GetBool("skip_only_chat")
+	var filters []model.ChannelsFilterFunc
+	if skip_only_chat {
+		filters = append(filters, model.FilterOnlyChat())
+	}
+	if skip_channel_id > 0 {
+		filters = append(filters, model.FilterChannelId(skip_channel_id))
+	}
+
+	channel, err := model.ChannelGroup.Next(group, modelName, filters...)
 	if err != nil {
 		message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", group, modelName)
 		if channel != nil {
@@ -145,6 +156,8 @@ func responseStreamClient(c *gin.Context, stream requester.StreamReaderInterface
 			if !errors.Is(err, io.EOF) {
 				fmt.Fprint(w, "data: "+err.Error()+"\n\n")
 				errWithOP = common.ErrorWrapper(err, "stream_error", http.StatusInternalServerError)
+				// 报错不应该缓存
+				cache.NoCache()
 			}
 
 			streamData := "data: [DONE]\n"
@@ -206,7 +219,8 @@ func responseCache(c *gin.Context, response string) {
 
 func shouldRetry(c *gin.Context, statusCode int) bool {
 	channelId := c.GetInt("specific_channel_id")
-	if channelId > 0 {
+	ignore := c.GetBool("specific_channel_id_ignore")
+	if channelId > 0 && !ignore {
 		return false
 	}
 	if statusCode == http.StatusTooManyRequests {
@@ -229,4 +243,12 @@ func processChannelRelayError(ctx context.Context, channelId int, channelName st
 	if controller.ShouldDisableChannel(&err.OpenAIError, err.StatusCode) {
 		controller.DisableChannel(channelId, channelName, err.Message, true)
 	}
+}
+
+func relayResponseWithErr(c *gin.Context, err *types.OpenAIErrorWithStatusCode) {
+	requestId := c.GetString(common.RequestIdKey)
+	err.OpenAIError.Message = common.MessageWithRequestId(err.OpenAIError.Message, requestId)
+	c.JSON(err.StatusCode, gin.H{
+		"error": err.OpenAIError,
+	})
 }

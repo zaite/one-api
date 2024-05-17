@@ -24,8 +24,10 @@ import {
   Checkbox,
   Switch,
   FormControlLabel,
-  Typography
+  Typography,
+  Tooltip
 } from '@mui/material';
+import LoadingButton from '@mui/lab/LoadingButton';
 
 import { Formik } from 'formik';
 import * as Yup from 'yup';
@@ -50,7 +52,7 @@ const validationSchema = Yup.object().shape({
   models: Yup.array().min(1, '模型 不能为空'),
   groups: Yup.array().min(1, '用户组 不能为空'),
   base_url: Yup.string().when('type', {
-    is: (value) => [3, 24, 8].includes(value),
+    is: (value) => [3, 8].includes(value),
     then: Yup.string().required('渠道API地址 不能为空'), // base_url 是必需的
     otherwise: Yup.string() // 在其他情况下，base_url 可以是任意字符串
   }),
@@ -78,6 +80,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions }) => {
   const [inputPrompt, setInputPrompt] = useState(defaultConfig.prompt);
   const [modelOptions, setModelOptions] = useState([]);
   const [batchAdd, setBatchAdd] = useState(false);
+  const [providerModelsLoad, setProviderModelsLoad] = useState(false);
 
   const initChannel = (typeValue) => {
     if (typeConfig[typeValue]?.inputLabel) {
@@ -142,6 +145,29 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions }) => {
       }
     });
     return modelList;
+  };
+
+  const getProviderModels = async (values, setFieldValue) => {
+    setProviderModelsLoad(true);
+    try {
+      const res = await API.post(`/api/channel/provider_models_list`, { ...values, models: '' });
+      const { success, message, data } = res.data;
+      if (success && data) {
+        let modelList = data.map((model) => {
+          return {
+            id: model,
+            group: '自定义：点击或回车输入'
+          };
+        });
+
+        setFieldValue('models', modelList);
+      } else {
+        showError(message || '获取模型列表失败');
+      }
+    } catch (error) {
+      showError(error.message);
+    }
+    setProviderModelsLoad(false);
   };
 
   const fetchModels = async () => {
@@ -505,6 +531,18 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions }) => {
                   >
                     填入所有模型
                   </Button>
+                  {inputLabel.provider_models_list && (
+                    <Tooltip title={inputPrompt.provider_models_list} placement="top">
+                      <LoadingButton
+                        loading={providerModelsLoad}
+                        onClick={() => {
+                          getProviderModels(values, setFieldValue);
+                        }}
+                      >
+                        {inputLabel.provider_models_list}
+                      </LoadingButton>
+                    </Tooltip>
+                  )}
                 </ButtonGroup>
               </Container>
               <FormControl fullWidth error={Boolean(touched.key && errors.key)} sx={{ ...theme.typography.otherInput }}>
@@ -629,6 +667,22 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions }) => {
                   )}
                 </FormControl>
               )}
+              {inputPrompt.only_chat && (
+                <FormControl fullWidth>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={values.only_chat === true}
+                        onClick={() => {
+                          setFieldValue('only_chat', !values.only_chat);
+                        }}
+                      />
+                    }
+                    label={inputLabel.only_chat}
+                  />
+                  <FormHelperText id="helper-tex-only_chat_model-label"> {inputPrompt.only_chat} </FormHelperText>
+                </FormControl>
+              )}
               {pluginList[values.type] &&
                 Object.keys(pluginList[values.type]).map((pluginId) => {
                   const plugin = pluginList[values.type][pluginId];
@@ -636,6 +690,7 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions }) => {
                     <>
                       <Divider sx={{ ...theme.typography.otherInput }} />
                       <Typography variant="h3">{plugin.name}</Typography>
+                      <Typography variant="caption">{plugin.description}</Typography>
                       {Object.keys(plugin.params).map((paramId) => {
                         const param = plugin.params[paramId];
                         const name = `plugin.${pluginId}.${paramId}`;

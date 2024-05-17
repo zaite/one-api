@@ -25,6 +25,7 @@ type ProviderConfig struct {
 	ImagesGenerations   string
 	ImagesEdit          string
 	ImagesVariations    string
+	ModelList           string
 }
 
 type BaseProvider struct {
@@ -142,4 +143,8 @@ func (p *BaseProvider) GetSupportedAPIUri(relayMode int) (url string, err *types
 	}
 
 	return
+}
+
+func (p *BaseProvider) GetRequester() *requester.HTTPRequester {
+	return p.Requester
 }

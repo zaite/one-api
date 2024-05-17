@@ -20,7 +20,7 @@ type ProviderInterface interface {
 	// 获取完整请求URL
 	// GetFullRequestURL(requestURL string, modelName string) string
 	// 获取请求头
-	// GetRequestHeaders() (headers map[string]string)
+	GetRequestHeaders() map[string]string
 	// 获取用量
 	GetUsage() *types.Usage
 	// 设置用量
@@ -35,6 +35,7 @@ type ProviderInterface interface {
 	// SupportAPI(relayMode int) bool
 	GetChannel() *model.Channel
 	ModelMappingHandler(modelName string) (string, error)
+	GetRequester() *requester.HTTPRequester
 }
 
 // 完成接口
@@ -96,6 +97,16 @@ type ImageEditsInterface interface {
 type ImageVariationsInterface interface {
 	ProviderInterface
 	CreateImageVariations(request *types.ImageEditRequest) (*types.ImageResponse, *types.OpenAIErrorWithStatusCode)
+}
+
+// type RelayInterface interface {
+// 	ProviderInterface
+// 	CreateRelay() (*http.Response, *types.OpenAIErrorWithStatusCode)
+// }
+
+type ModelListInterface interface {
+	ProviderInterface
+	GetModelList() ([]string, error)
 }
 
 // 余额接口

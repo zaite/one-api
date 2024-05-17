@@ -15,6 +15,7 @@ var Footer = ""
 var Logo = ""
 var TopUpLink = ""
 var ChatLink = ""
+var ChatLinks = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
@@ -175,6 +176,8 @@ const (
 	ChannelTypeCloudflareAI   = 35
 	ChannelTypeCohere         = 36
 	ChannelTypeStabilityAI    = 37
+	ChannelTypeCoze           = 38
+	ChannelTypeOllama         = 39
 )
 
 var ChannelBaseURLs = []string{
@@ -216,6 +219,8 @@ var ChannelBaseURLs = []string{
 	"",                                  //35
 	"https://api.cohere.ai/v1",          //36
 	"https://api.stability.ai/v2beta",   //37
+	"https://api.coze.com/open_api",     //38
+	"",                                  //39
 }
 
 const (
