@@ -4,6 +4,7 @@ gin_mode: "release" # gin 模式，可选值为 "release" 或 "debug"，默认�
 debug: false # 是否启用调试模式，启用后将输出更多日志信息。
 log_dir: "./logs" # 日志目录
 session_secret: "" # 会话密钥，未设置则使用随机值。
+disable_token_encoders: false # 是否禁用 token 编码器计算tokens。启用后 内存占用可减少 40MB 左右，但是stream模式下tokens计算不准确
 
 # 数据库设置
 sql_dsn: "" # 设置之后将使用指定数据库而非 SQLite，请使用 MySQL 或 PostgreSQL
@@ -68,3 +69,8 @@ storage: # 存储设置 (可选,主要用于图片生成，有些供应商不提
     secret: "" # 你的 sm.ms API 密钥
   imgur:
     client_id: "" # 你的 imgur client_id
+  alioss: # 阿里云OSS对象存储
+    endpoint: "" # Endpoint（地域节点）,比如oss-cn-beijing.aliyuncs.com
+    bucketName: "" # Bucket名称，比如zerodeng-superai
+    accessKeyId: "" # 阿里授权KEY,在阿里云后台用户RAM控制部分获取
+    accessKeySecret: "" # 阿里授权SECRET,在阿里云后台用户RAM控制部分获取

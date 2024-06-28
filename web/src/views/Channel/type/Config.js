@@ -11,6 +11,7 @@ const defaultConfig = {
     models: [],
     groups: ['default'],
     plugin: {},
+    tag: '',
     only_chat: false
   },
   inputLabel: {
@@ -25,6 +26,7 @@ const defaultConfig = {
     model_mapping: '模型映射关系',
     groups: '用户组',
     only_chat: '仅支持聊天',
+    tag: '标签',
     provider_models_list: ''
   },
   prompt: {
@@ -38,10 +40,11 @@ const defaultConfig = {
     models:
       '请选择该渠道所支持的模型,你也可以输入通配符*来匹配模型，例如：gpt-3.5*，表示支持所有gpt-3.5开头的模型，*号只能在最后一位使用，前面必须有字符，例如：gpt-3.5*是正确的，*gpt-3.5是错误的',
     model_mapping:
-      '请输入要修改的模型映射关系，格式为：api请求模型ID:实际转发给渠道的模型ID，使用JSON数组表示，例如：{"gpt-3.5": "gpt-35"}',
+      '请输入要修改的模型映射关系，格式为：api请求模型ID:实际转发给渠道的模型ID，使用JSON数组表示，例如：{"gpt-3.5-turbo-16k": "gpt-3.5-turbo-16k-0613"}',
     groups: '请选择该渠道所支持的用户组',
     only_chat: '如果选择了仅支持聊天，那么遇到有函数调用的请求会跳过该渠道',
-    provider_models_list: '必须填写所有数据后才能获取模型列表'
+    provider_models_list: '必须填写所有数据后才能获取模型列表',
+    tag: '你可以为你的渠道打一个标签，打完标签后，可以通过标签进行批量管理渠道'
   },
   modelGroup: 'OpenAI'
 };
@@ -58,7 +61,8 @@ const typeConfig = {
       other: '替换 API 版本'
     },
     prompt: {
-      other: '输入后，会替换请求地址中的v1，例如：freeapi，则请求chat时会变成https://xxx.com/freeapi/chat/completions'
+      other:
+        '输入后，会替换请求地址中的v1，例如：freeapi，则请求chat时会变成https://xxx.com/freeapi/chat/completions,如果需要禁用版本号，请输入 disable'
     }
   },
   3: {
@@ -68,7 +72,7 @@ const typeConfig = {
     },
     prompt: {
       base_url: '请填写AZURE_OPENAI_ENDPOINT',
-      other: '请输入默认API版本，例如：2023-06-01-preview'
+      other: '请输入默认API版本，例如：2024-05-01-preview'
     }
   },
   11: {
@@ -212,6 +216,9 @@ const typeConfig = {
     modelGroup: 'Deepseek'
   },
   29: {
+    inputLabel: {
+      provider_models_list: '从Moonshot获取模型列表'
+    },
     input: {
       models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
       test_model: 'moonshot-v1-8k'
@@ -356,6 +363,16 @@ const typeConfig = {
       base_url: '请输入你部署的Ollama地址，例如：http://127.0.0.1:11434，如果你使用了cloudflare Zero Trust，可以在下方插件填入授权信息',
       key: '请随意填写'
     }
+  },
+  40: {
+    input: {
+      models: ['hunyuan-lite', 'hunyuan-pro', 'hunyuan-standard-256K', 'hunyuan-standard'],
+      test_model: 'hunyuan-lite'
+    },
+    prompt: {
+      key: '按照如下格式输入：SecretId|SecretKey'
+    },
+    modelGroup: 'Hunyuan'
   }
 };
 

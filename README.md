@@ -13,7 +13,7 @@
 
 # One API
 
-_本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开发而来的，主要将原项目中的模块代码分离，模块化，并修改了前端界面。本项目同样遵循 MIT 协议。_
+_本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开发而来的_
 
 <p align="center">
   <a href="https://raw.githubusercontent.com/MartialBE/one-api/main/LICENSE">
@@ -43,6 +43,10 @@ _本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开�
 
 </div>
 
+> [!WARNING]
+> 本项目为个人学习使用，不保证稳定性，且不提供任何技术支持，使用者必须在遵循 OpenAI 的使用条款以及法律法规的情况下使用，不得用于非法用途。  
+> 根据[《生成式人工智能服务管理暂行办法》](http://www.cac.gov.cn/2023-07/13/c_1690898327029107.htm)的要求，请勿对中国地区公众提供一切未经备案的生成式人工智能服务。
+
 ## 功能变化
 
 - 全新的 UI 界面
@@ -61,6 +65,10 @@ _本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开�
 - 支持模型按次收费
 - 支持模型通配符
 - 支持使用配置文件启动程序
+- 支持模型价格更新
+- 支持自动获取供应商模型
+- 支持仅聊天，开启后如果有传入`function call`参数会跳过该渠道
+- 支持支付
 
 ## 文档
 
@@ -104,6 +112,10 @@ _本项目是基于[one-api](https://github.com/songquanpeng/one-api)二次开�
   - [new api](https://github.com/Calcium-Ion/new-api)，Midjourney 模块的代码来源于此
 
 感谢以上项目的作者和贡献者
+
+## 交流群
+
+<img src="https://github.com/MartialBE/one-api/assets/42402987/9b608d39-70ae-4b2e-be49-09afab6bd536" width="300">
 
 ## 其他
 

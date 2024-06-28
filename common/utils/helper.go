@@ -1,4 +1,4 @@
-package common
+package utils
 
 import (
 	"encoding/json"
@@ -14,9 +14,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 )
+
+var node *snowflake.Node
+
+func init() {
+	var err error
+	node, err = snowflake.NewNode(1)
+	if err != nil {
+		log.Fatalf("snowflake.NewNode failed: %v", err)
+	}
+}
 
 func OpenBrowser(url string) {
 	var err error
@@ -109,13 +120,13 @@ func Seconds2Time(num int) (time string) {
 }
 
 func Interface2String(inter interface{}) string {
-	switch inter.(type) {
+	switch inter := inter.(type) {
 	case string:
-		return inter.(string)
+		return inter
 	case int:
-		return fmt.Sprintf("%d", inter.(int))
+		return fmt.Sprintf("%d", inter)
 	case float64:
-		return fmt.Sprintf("%f", inter.(float64))
+		return fmt.Sprintf("%f", inter)
 	}
 	return "Not Implemented"
 }
@@ -140,12 +151,7 @@ func GetUUID() string {
 
 const keyChars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
 func GenerateKey() string {
-	rand.Seed(time.Now().UnixNano())
 	key := make([]byte, 48)
 	for i := 0; i < 16; i++ {
 		key[i] = keyChars[rand.Intn(len(keyChars))]
@@ -162,7 +168,6 @@ func GenerateKey() string {
 }
 
 func GetRandomString(length int) string {
-	rand.Seed(time.Now().UnixNano())
 	key := make([]byte, length)
 	for i := 0; i < length; i++ {
 		key[i] = keyChars[rand.Intn(len(keyChars))]
@@ -209,6 +214,14 @@ func String2Int(str string) int {
 	return num
 }
 
+func String2Int64(str string) int64 {
+	num, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return num
+}
+
 func IsFileExist(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil || os.IsExist(err)
@@ -221,6 +234,33 @@ func Contains[T comparable](value T, slice []T) bool {
 		}
 	}
 	return false
+}
+
+func SliceToMap[T comparable](slice []T) map[T]bool {
+	res := make(map[T]bool)
+	for _, item := range slice {
+		res[item] = true
+	}
+	return res
+}
+
+func DifferenceSets[T comparable](set1, set2 map[T]bool) (diff1, diff2 []T) {
+	diff1 = make([]T, 0)
+	diff2 = make([]T, 0)
+
+	for key := range set1 {
+		if !set2[key] {
+			diff1 = append(diff1, key)
+		}
+	}
+
+	for key := range set2 {
+		if !set1[key] {
+			diff2 = append(diff2, key)
+		}
+	}
+
+	return diff1, diff2
 }
 
 func Filter[T any](arr []T, f func(T) bool) []T {
@@ -261,4 +301,20 @@ func Marshal[T interface{}](data T) string {
 		return ""
 	}
 	return string(res)
+}
+
+func GenerateTradeNo() string {
+	id := node.Generate()
+
+	return id.String()
+}
+
+func Decimal(value float64, decimalPlace int) float64 {
+	format := fmt.Sprintf("%%.%df", decimalPlace)
+	value, _ = strconv.ParseFloat(fmt.Sprintf(format, value), 64)
+	return value
+}
+
+func GetUnixTime() int64 {
+	return time.Now().Unix()
 }

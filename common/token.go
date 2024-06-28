@@ -4,12 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"one-api/common/config"
+	"one-api/common/logger"
 	"strings"
 
 	"one-api/common/image"
 	"one-api/types"
 
 	"github.com/MartialBE/tiktoken-go"
+	"github.com/spf13/viper"
 )
 
 var tokenEncoderMap = map[string]*tiktoken.Tiktoken{}
@@ -18,27 +21,36 @@ var gpt4TokenEncoder *tiktoken.Tiktoken
 var gpt4oTokenEncoder *tiktoken.Tiktoken
 
 func InitTokenEncoders() {
-	SysLog("initializing token encoders")
+	if viper.GetBool("disable_token_encoders") {
+		config.DisableTokenEncoders = true
+		logger.SysLog("token encoders disabled")
+		return
+	}
+	logger.SysLog("initializing token encoders")
 	var err error
 	gpt35TokenEncoder, err = tiktoken.EncodingForModel("gpt-3.5-turbo")
 	if err != nil {
-		FatalLog(fmt.Sprintf("failed to get gpt-3.5-turbo token encoder: %s", err.Error()))
+		logger.FatalLog(fmt.Sprintf("failed to get gpt-3.5-turbo token encoder: %s", err.Error()))
 	}
 
 	gpt4TokenEncoder, err = tiktoken.EncodingForModel("gpt-4")
 	if err != nil {
-		FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
+		logger.FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
 	}
 
 	gpt4oTokenEncoder, err = tiktoken.EncodingForModel("gpt-4o")
 	if err != nil {
-		FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
+		logger.FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
 	}
 
-	SysLog("token encoders initialized")
+	logger.SysLog("token encoders initialized")
 }
 
 func getTokenEncoder(model string) *tiktoken.Tiktoken {
+	if config.DisableTokenEncoders {
+		return nil
+	}
+
 	tokenEncoder, ok := tokenEncoderMap[model]
 	if ok {
 		return tokenEncoder
@@ -54,7 +66,7 @@ func getTokenEncoder(model string) *tiktoken.Tiktoken {
 		var err error
 		tokenEncoder, err = tiktoken.EncodingForModel(model)
 		if err != nil {
-			SysError(fmt.Sprintf("failed to get token encoder for model %s: %s, using encoder for gpt-3.5-turbo", model, err.Error()))
+			logger.SysError(fmt.Sprintf("failed to get token encoder for model %s: %s, using encoder for gpt-3.5-turbo", model, err.Error()))
 			tokenEncoder = gpt35TokenEncoder
 		}
 	}
@@ -64,7 +76,7 @@ func getTokenEncoder(model string) *tiktoken.Tiktoken {
 }
 
 func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int {
-	if ApproximateTokenEnabled {
+	if config.DisableTokenEncoders || config.ApproximateTokenEnabled {
 		return int(float64(len(text)) * 0.38)
 	}
 	return len(tokenEncoder.Encode(text, nil, nil))
@@ -108,7 +120,8 @@ func CountTokenMessages(messages []types.ChatCompletionMessage, model string) in
 						}
 						imageTokens, err := countImageTokens(url, detail)
 						if err != nil {
-							SysError("error counting image tokens: " + err.Error())
+							//Due to the excessive length of the error information, only extract and record the most critical part.
+							logger.SysError("error counting image tokens: " + err.Error())
 						} else {
 							tokenNum += imageTokens
 						}
@@ -135,7 +148,7 @@ const (
 // https://platform.openai.com/docs/guides/vision/calculating-costs
 // https://github.com/openai/openai-cookbook/blob/05e3f9be4c7a2ae7ecf029a7c32065b024730ebe/examples/How_to_count_tokens_with_tiktoken.ipynb
 func countImageTokens(url string, detail string) (_ int, err error) {
-	var fetchSize = true
+	// var fetchSize = true
 	var width, height int
 	// Reference: https://platform.openai.com/docs/guides/vision/low-or-high-fidelity-image-understanding
 	// detail == "auto" is undocumented on how it works, it just said the model will use the auto setting which will look at the image input size and decide if it should use the low or high setting.
@@ -170,11 +183,9 @@ func countImageTokens(url string, detail string) (_ int, err error) {
 	case "low":
 		return lowDetailCost, nil
 	case "high":
-		if fetchSize {
-			width, height, err = image.GetImageSize(url)
-			if err != nil {
-				return 0, err
-			}
+		width, height, err = image.GetImageSize(url)
+		if err != nil {
+			return 0, err
 		}
 		if width > 2048 || height > 2048 { // max(width, height) > 2048
 			ratio := float64(2048) / math.Max(float64(width), float64(height))

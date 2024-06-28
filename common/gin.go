@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"one-api/common/logger"
 	"one-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,11 @@ func UnmarshalBodyReusable(c *gin.Context, v any) error {
 }
 
 func ErrorWrapper(err error, code string, statusCode int) *types.OpenAIErrorWithStatusCode {
-	return StringErrorWrapper(err.Error(), code, statusCode)
+	errString := "error"
+	if err != nil {
+		errString = err.Error()
+	}
+	return StringErrorWrapper(errString, code, statusCode)
 }
 
 func ErrorToOpenAIError(err error) *types.OpenAIError {
@@ -65,7 +70,7 @@ func AbortWithMessage(c *gin.Context, statusCode int, message string) {
 		},
 	})
 	c.Abort()
-	LogError(c.Request.Context(), message)
+	logger.LogError(c.Request.Context(), message)
 }
 
 func APIRespondWithError(c *gin.Context, status int, err error) {

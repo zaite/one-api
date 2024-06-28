@@ -5,10 +5,10 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
+	"one-api/common/config"
 	"one-api/common/requester"
 	"one-api/types"
 	"strings"
-	"time"
 )
 
 type OpenAIStreamHandler struct {
@@ -18,7 +18,7 @@ type OpenAIStreamHandler struct {
 }
 
 func (p *OpenAIProvider) CreateChatCompletion(request *types.ChatCompletionRequest) (openaiResponse *types.ChatCompletionResponse, errWithCode *types.OpenAIErrorWithStatusCode) {
-	req, errWithCode := p.GetRequestTextBody(common.RelayModeChatCompletions, request.Model, request)
+	req, errWithCode := p.GetRequestTextBody(config.RelayModeChatCompletions, request.Model, request)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
@@ -58,11 +58,24 @@ func (p *OpenAIProvider) CreateChatCompletion(request *types.ChatCompletionReque
 }
 
 func (p *OpenAIProvider) CreateChatCompletionStream(request *types.ChatCompletionRequest) (requester.StreamReaderInterface[string], *types.OpenAIErrorWithStatusCode) {
-	req, errWithCode := p.GetRequestTextBody(common.RelayModeChatCompletions, request.Model, request)
+	streamOptions := request.StreamOptions
+	// 如果支持流式返回Usage 则需要更改配置：
+	if p.SupportStreamOptions {
+		request.StreamOptions = &types.StreamOptions{
+			IncludeUsage: true,
+		}
+	} else {
+		// 避免误传导致报错
+		request.StreamOptions = nil
+	}
+	req, errWithCode := p.GetRequestTextBody(config.RelayModeChatCompletions, request.Model, request)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
 	defer req.Body.Close()
+
+	// 恢复原来的配置
+	request.StreamOptions = streamOptions
 
 	// 发送请求
 	resp, errWithCode := p.Requester.SendRequestRaw(req)
@@ -103,25 +116,30 @@ func (h *OpenAIStreamHandler) HandlerChatStream(rawLine *[]byte, dataChan chan s
 		return
 	}
 
-	error := ErrorHandle(&openaiResponse.OpenAIErrorResponse)
-	if error != nil {
-		errChan <- error
+	aiError := ErrorHandle(&openaiResponse.OpenAIErrorResponse)
+	if aiError != nil {
+		errChan <- aiError
 		return
 	}
 
 	if len(openaiResponse.Choices) == 0 {
+		if openaiResponse.Usage != nil {
+			*h.Usage = *openaiResponse.Usage
+		}
 		*rawLine = nil
 		return
 	}
 
 	dataChan <- string(*rawLine)
 
-	if h.isAzure {
-		// 阻塞 20ms
-		time.Sleep(20 * time.Millisecond)
+	if len(openaiResponse.Choices) > 0 && openaiResponse.Choices[0].Usage != nil {
+		*h.Usage = *openaiResponse.Choices[0].Usage
+	} else {
+		if h.Usage.TotalTokens == 0 {
+			h.Usage.TotalTokens = h.Usage.PromptTokens
+		}
+		countTokenText := common.CountTokenText(openaiResponse.GetResponseText(), h.ModelName)
+		h.Usage.CompletionTokens += countTokenText
+		h.Usage.TotalTokens += countTokenText
 	}
-
-	countTokenText := common.CountTokenText(openaiResponse.getResponseText(), h.ModelName)
-	h.Usage.CompletionTokens += countTokenText
-	h.Usage.TotalTokens += countTokenText
 }

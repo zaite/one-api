@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"one-api/common"
+	"one-api/common/config"
 	"one-api/common/requester"
 	"one-api/model"
 	"one-api/types"
@@ -17,8 +18,9 @@ type OpenAIProviderFactory struct{}
 
 type OpenAIProvider struct {
 	base.BaseProvider
-	IsAzure       bool
-	BalanceAction bool
+	IsAzure              bool
+	BalanceAction        bool
+	SupportStreamOptions bool
 }
 
 // 创建 OpenAIProvider
@@ -31,17 +33,23 @@ func (f OpenAIProviderFactory) Create(channel *model.Channel) base.ProviderInter
 // 创建 OpenAIProvider
 // https://platform.openai.com/docs/api-reference/introduction
 func CreateOpenAIProvider(channel *model.Channel, baseURL string) *OpenAIProvider {
-	config := getOpenAIConfig(baseURL)
+	openaiConfig := getOpenAIConfig(baseURL)
 
-	return &OpenAIProvider{
+	OpenAIProvider := &OpenAIProvider{
 		BaseProvider: base.BaseProvider{
-			Config:    config,
+			Config:    openaiConfig,
 			Channel:   channel,
 			Requester: requester.NewHTTPRequester(*channel.Proxy, RequestErrorHandle),
 		},
 		IsAzure:       false,
 		BalanceAction: true,
 	}
+
+	if channel.Type == config.ChannelTypeOpenAI {
+		OpenAIProvider.SupportStreamOptions = true
+	}
+
+	return OpenAIProvider
 }
 
 func getOpenAIConfig(baseURL string) base.ProviderConfig {
@@ -102,8 +110,15 @@ func (p *OpenAIProvider) GetFullRequestURL(requestURL string, modelName string) 
 			requestURL = fmt.Sprintf("/openai%s?api-version=%s", requestURL, apiVersion)
 		}
 
-	} else if p.Channel.Type == common.ChannelTypeCustom && p.Channel.Other != "" {
-		requestURL = strings.Replace(requestURL, "v1", p.Channel.Other, 1)
+	} else if p.Channel.Type == config.ChannelTypeCustom && p.Channel.Other != "" {
+		replaceValue := p.Channel.Other
+		if replaceValue == "disable" {
+			replaceValue = ""
+		} else {
+			replaceValue = "/" + replaceValue
+		}
+
+		requestURL = strings.Replace(requestURL, "/v1", replaceValue, 1)
 	}
 
 	if strings.HasPrefix(baseURL, "https://gateway.ai.cloudflare.com") {

@@ -32,6 +32,7 @@ const SystemSetting = () => {
     GitHubOAuthEnabled: '',
     GitHubClientId: '',
     GitHubClientSecret: '',
+    LarkAuthEnabled: '',
     LarkClientId: '',
     LarkClientSecret: '',
     Notice: '',
@@ -95,6 +96,7 @@ const SystemSetting = () => {
       case 'EmailVerificationEnabled':
       case 'GitHubOAuthEnabled':
       case 'WeChatAuthEnabled':
+      case 'LarkAuthEnabled':
       case 'TurnstileCheckEnabled':
       case 'EmailDomainRestrictionEnabled':
       case 'RegisterEnabled':
@@ -300,6 +302,12 @@ const SystemSetting = () => {
             </Grid>
             <Grid xs={12} md={3}>
               <FormControlLabel
+                label="允许通过飞书登录 & 注册"
+                control={<Checkbox checked={inputs.LarkAuthEnabled === 'true'} onChange={handleInputChange} name="LarkAuthEnabled" />}
+              />
+            </Grid>
+            <Grid xs={12} md={3}>
+              <FormControlLabel
                 label="允许新用户注册（此项为否时，新用户将无法以任何方式进行注册）"
                 control={<Checkbox checked={inputs.RegisterEnabled === 'true'} onChange={handleInputChange} name="RegisterEnabled" />}
               />
@@ -368,6 +376,9 @@ const SystemSetting = () => {
         </SubCard>
         <SubCard title="配置 SMTP" subTitle="用以支持系统的邮件发送">
           <Grid container spacing={{ xs: 3, sm: 2, md: 4 }}>
+            <Grid xs={12}>
+              <Alert severity="info">请注意，有些邮箱服务商发送邮件时会携带你的服务器IP地址，非个人使用时建议使用专业的邮件服务商</Alert>
+            </Grid>
             <Grid xs={12} md={4}>
               <FormControl fullWidth>
                 <InputLabel htmlFor="SMTPServer">SMTP 服务器地址</InputLabel>

@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"one-api/common"
+	"one-api/common/config"
 	"one-api/common/requester"
+	"one-api/common/utils"
 	"one-api/types"
 	"strings"
 )
@@ -55,7 +57,7 @@ func (p *CozeProvider) CreateChatCompletionStream(request *types.ChatCompletionR
 }
 
 func (p *CozeProvider) getChatRequest(request *types.ChatCompletionRequest) (*http.Request, *types.OpenAIErrorWithStatusCode) {
-	url, errWithCode := p.GetSupportedAPIUri(common.RelayModeChatCompletions)
+	url, errWithCode := p.GetSupportedAPIUri(config.RelayModeChatCompletions)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
@@ -89,9 +91,9 @@ func (p *CozeProvider) convertToChatOpenai(response *CozeResponse, request *type
 	}
 
 	openaiResponse = &types.ChatCompletionResponse{
-		ID:      fmt.Sprintf("chatcmpl-%s", common.GetUUID()),
+		ID:      fmt.Sprintf("chatcmpl-%s", utils.GetUUID()),
 		Object:  "chat.completion",
-		Created: common.GetTimestamp(),
+		Created: utils.GetTimestamp(),
 		Model:   request.Model,
 		Choices: []types.ChatCompletionChoice{{
 			Index: 0,
@@ -103,9 +105,8 @@ func (p *CozeProvider) convertToChatOpenai(response *CozeResponse, request *type
 		}},
 	}
 
-	p.Usage.CompletionTokens = 0
-	p.Usage.PromptTokens = 1
-	p.Usage.TotalTokens = 1
+	p.Usage.CompletionTokens = common.CountTokenText(response.String(), request.Model)
+	p.Usage.TotalTokens = p.Usage.CompletionTokens + p.Usage.PromptTokens
 	openaiResponse.Usage = p.Usage
 
 	return
@@ -169,9 +170,9 @@ func (h *CozeStreamHandler) handlerStream(rawLine *[]byte, dataChan chan string,
 
 func (h *CozeStreamHandler) convertToOpenaiStream(chatResponse *CozeStreamResponse, dataChan chan string) {
 	streamResponse := types.ChatCompletionStreamResponse{
-		ID:      fmt.Sprintf("chatcmpl-%s", common.GetUUID()),
+		ID:      fmt.Sprintf("chatcmpl-%s", utils.GetUUID()),
 		Object:  "chat.completion.chunk",
-		Created: common.GetTimestamp(),
+		Created: utils.GetTimestamp(),
 		Model:   h.Request.Model,
 	}
 
@@ -187,9 +188,8 @@ func (h *CozeStreamHandler) convertToOpenaiStream(chatResponse *CozeStreamRespon
 		choice.FinishReason = types.FinishReasonStop
 	} else {
 		choice.Delta.Content = chatResponse.Message.Content
-
-		h.Usage.TotalTokens = 1
-		h.Usage.PromptTokens = 1
+		h.Usage.CompletionTokens += common.CountTokenText(chatResponse.Message.Content, h.Request.Model)
+		h.Usage.TotalTokens = h.Usage.CompletionTokens + h.Usage.PromptTokens
 	}
 
 	streamResponse.Choices = []types.ChatCompletionStreamChoice{choice}
