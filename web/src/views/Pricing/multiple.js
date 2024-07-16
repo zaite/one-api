@@ -11,14 +11,12 @@ import { Card } from '@mui/material';
 import PricesTableRow from './component/TableRow';
 import KeywordTableHead from 'ui-component/TableHead';
 import { API } from 'utils/api';
-import EditeModal from './component/EditModal';
+import { useTranslation } from 'react-i18next';
 
 // ----------------------------------------------------------------------
-export default function Multiple({ ownedby, prices, reloadData, noPriceModel }) {
+export default function Multiple({ prices, reloadData, handleOpenModal, ownedby }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState([]);
-
-  const [openModal, setOpenModal] = useState(false);
-  const [editPricesItem, setEditPricesItem] = useState(null);
 
   // 处理刷新
   const handleRefresh = async () => {
@@ -56,7 +54,7 @@ export default function Multiple({ ownedby, prices, reloadData, noPriceModel }) 
       }
       const { success, message } = res.data;
       if (success) {
-        showSuccess('操作成功完成！');
+        showSuccess(t('userPage.operationSuccess'));
         if (action === 'delete') {
           await handleRefresh();
         }
@@ -70,23 +68,6 @@ export default function Multiple({ ownedby, prices, reloadData, noPriceModel }) 
     }
   };
 
-  const handleOpenModal = (item) => {
-    setEditPricesItem(item);
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setEditPricesItem(null);
-  };
-
-  const handleOkModal = (status) => {
-    if (status === true) {
-      handleCloseModal();
-      handleRefresh();
-    }
-  };
-
   return (
     <>
       <Card>
@@ -96,38 +77,23 @@ export default function Multiple({ ownedby, prices, reloadData, noPriceModel }) 
               <KeywordTableHead
                 headLabel={[
                   { id: 'collapse', label: '', disableSort: true },
-                  { id: 'type', label: '类型', disableSort: true },
-                  { id: 'channel_type', label: '供应商', disableSort: true },
-                  { id: 'input', label: '输入倍率', disableSort: true },
-                  { id: 'output', label: '输出倍率', disableSort: true },
-                  { id: 'count', label: '模型数量', disableSort: true },
-                  { id: 'action', label: '操作', disableSort: true }
+                  { id: 'type', label: t('pricing_edit.type'), disableSort: true },
+                  { id: 'channel_type', label: t('modelpricePage.channelType'), disableSort: true },
+                  { id: 'input', label: t('modelpricePage.inputMultiplier'), disableSort: true },
+                  { id: 'output', label: t('modelpricePage.outputMultiplier'), disableSort: true },
+                  { id: 'count', label: t('pricingPage.ModelCount'), disableSort: true },
+                  { id: 'action', label: t('paymentGatewayPage.tableHeaders.action'), disableSort: true }
                 ]}
               />
               <TableBody>
                 {rows.map((row) => (
-                  <PricesTableRow
-                    item={row}
-                    managePrices={managePrices}
-                    key={row.id}
-                    handleOpenModal={handleOpenModal}
-                    setModalPricesItem={setEditPricesItem}
-                    ownedby={ownedby}
-                  />
+                  <PricesTableRow item={row} managePrices={managePrices} key={row.id} handleOpenModal={handleOpenModal} ownedby={ownedby} />
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
         </PerfectScrollbar>
       </Card>
-      <EditeModal
-        open={openModal}
-        onCancel={handleCloseModal}
-        onOk={handleOkModal}
-        pricesItem={editPricesItem}
-        ownedby={ownedby}
-        noPriceModel={noPriceModel}
-      />
     </>
   );
 }
@@ -135,6 +101,6 @@ export default function Multiple({ ownedby, prices, reloadData, noPriceModel }) 
 Multiple.propTypes = {
   prices: PropTypes.array,
   ownedby: PropTypes.array,
-  reloadData: PropTypes.func,
-  noPriceModel: PropTypes.array
+  handleOpenModal: PropTypes.func,
+  reloadData: PropTypes.func
 };
