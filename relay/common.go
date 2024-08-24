@@ -70,6 +70,7 @@ func GetProvider(c *gin.Context, modeName string) (provider providersBase.Provid
 		return
 	}
 	provider.SetOriginalModel(modeName)
+	c.Set("original_model", modeName)
 
 	newModelName, fail = provider.ModelMappingHandler(modeName)
 	if fail != nil {
@@ -173,7 +174,7 @@ func responseStreamClient(c *gin.Context, stream requester.StreamReaderInterface
 				}
 			}
 
-			streamData := "data: [DONE]\n"
+			streamData := "data: [DONE]\n\n"
 			fmt.Fprint(w, streamData)
 			cache.SetResponse(streamData)
 			return false
