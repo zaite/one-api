@@ -34,5 +34,12 @@ func init() {
 		config.ChannelTypeOllama:       "Ollama",
 		config.ChannelTypeHunyuan:      "Hunyuan",
 		config.ChannelTypeSuno:         "Suno",
+		config.ChannelTypeLLAMA:        "LLAMA",
+		config.ChannelTypeFlux:         "Flux",
+		config.ChannelTypeIdeogram:     "Ideogram",
+		config.ChannelTypeSiliconflow:  "Siliconflow",
+		config.ChannelTypeJina:         "Jina",
+		config.ChannelTypeRerank:       "Rerank",
+		config.ChannelTypeGithub:       "Github",
 	}
 }
