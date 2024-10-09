@@ -194,12 +194,33 @@ export const CHANNEL_OPTIONS = {
     color: 'orange',
     url: 'https://console.cloud.google.com/'
   },
+  45: {
+    key: 45,
+    text: 'Siliconflow',
+    value: 45,
+    color: 'orange',
+    url: 'https://siliconflow.cn/'
+  },
+  47: {
+    key: 47,
+    text: 'Jina',
+    value: 47,
+    color: 'orange',
+    url: 'https://jina.ai/'
+  },
   24: {
     key: 24,
     text: 'Azure Speech',
     value: 24,
     color: 'orange',
     url: 'https://portal.azure.com/'
+  },
+  49: {
+    key: 49,
+    text: 'Github',
+    value: 49,
+    color: 'default',
+    url: 'https://github.com/marketplace/models'
   },
   8: {
     key: 8,

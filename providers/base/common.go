@@ -28,6 +28,7 @@ type ProviderConfig struct {
 	ImagesEdit          string
 	ImagesVariations    string
 	ModelList           string
+	Rerank              string
 }
 
 func (pc *ProviderConfig) SetAPIUri(customMapping map[string]interface{}) {
@@ -100,6 +101,16 @@ func (p *BaseProvider) CommonRequestHeaders(headers map[string]string) {
 	if headers["Content-Type"] == "" {
 		headers["Content-Type"] = "application/json"
 	}
+	// 自定义header
+	if p.Channel.ModelHeaders != nil {
+		var customHeaders map[string]string
+		err := json.Unmarshal([]byte(*p.Channel.ModelHeaders), &customHeaders)
+		if err == nil {
+			for key, value := range customHeaders {
+				headers[key] = value
+			}
+		}
+	}
 }
 
 func (p *BaseProvider) GetUsage() *types.Usage {
@@ -170,6 +181,8 @@ func (p *BaseProvider) GetAPIUri(relayMode int) string {
 		return p.Config.ImagesEdit
 	case config.RelayModeImagesVariations:
 		return p.Config.ImagesVariations
+	case config.RelayModeRerank:
+		return p.Config.Rerank
 	default:
 		return ""
 	}
