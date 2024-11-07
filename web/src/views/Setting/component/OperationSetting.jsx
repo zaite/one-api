@@ -21,7 +21,6 @@ const OperationSetting = () => {
     QuotaForInvitee: 0,
     QuotaRemindThreshold: 0,
     PreConsumedQuota: 0,
-    GroupRatio: '',
     TopUpLink: '',
     ChatLink: '',
     ChatLinks: '',
@@ -56,9 +55,6 @@ const OperationSetting = () => {
       if (success) {
         let newInputs = {};
         data.forEach((item) => {
-          if (item.key === 'GroupRatio') {
-            item.value = JSON.stringify(JSON.parse(item.value), null, 2);
-          }
           if (item.key === 'RechargeDiscount') {
             item.value = JSON.stringify(JSON.parse(item.value), null, 2);
           }
@@ -123,15 +119,6 @@ const OperationSetting = () => {
         }
         if (originInputs['QuotaRemindThreshold'] !== inputs.QuotaRemindThreshold) {
           await updateOption('QuotaRemindThreshold', inputs.QuotaRemindThreshold);
-        }
-        break;
-      case 'ratio':
-        if (originInputs['GroupRatio'] !== inputs.GroupRatio) {
-          if (!verifyJSON(inputs.GroupRatio)) {
-            showError('分组倍率不是合法的 JSON 字符串');
-            return;
-          }
-          await updateOption('GroupRatio', inputs.GroupRatio);
         }
         break;
       case 'chatlinks':
@@ -599,7 +586,9 @@ const OperationSetting = () => {
         <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
           <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
             <FormControl fullWidth>
-              <Alert severity="info">{t('setting_index.operationSettings.paymentSettings.alert')}</Alert>
+              <Alert severity="info">
+                <div dangerouslySetInnerHTML={{ __html: t('setting_index.operationSettings.paymentSettings.alert') }} />
+              </Alert>
             </FormControl>
             <Stack direction={{ sm: 'column', md: 'row' }} spacing={{ xs: 3, sm: 2, md: 4 }}>
               <FormControl fullWidth>
@@ -631,7 +620,9 @@ const OperationSetting = () => {
             </Stack>
           </Stack>
           <Stack spacing={2}>
-            <Alert severity="info">{t('setting_index.operationSettings.paymentSettings.discountInfo')}</Alert>
+            <Alert severity="info">
+              <div dangerouslySetInnerHTML={{ __html: t('setting_index.operationSettings.paymentSettings.discountInfo') }} />
+            </Alert>
             <FormControl fullWidth>
               <TextField
                 multiline
@@ -655,33 +646,6 @@ const OperationSetting = () => {
             }}
           >
             {t('setting_index.operationSettings.paymentSettings.save')}
-          </Button>
-        </Stack>
-      </SubCard>
-      <SubCard title={t('setting_index.operationSettings.rateSettings.title')}>
-        <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
-          <FormControl fullWidth>
-            <TextField
-              multiline
-              maxRows={15}
-              id="channel-GroupRatio-label"
-              label={t('setting_index.operationSettings.rateSettings.groupRatio.label')}
-              value={inputs.GroupRatio}
-              name="GroupRatio"
-              onChange={handleInputChange}
-              aria-describedby="helper-text-channel-GroupRatio-label"
-              minRows={5}
-              placeholder={t('setting_index.operationSettings.rateSettings.groupRatio.placeholder')}
-            />
-          </FormControl>
-
-          <Button
-            variant="contained"
-            onClick={() => {
-              submitConfig('ratio').then();
-            }}
-          >
-            {t('setting_index.operationSettings.rateSettings.save')}
           </Button>
         </Stack>
       </SubCard>

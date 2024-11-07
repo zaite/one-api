@@ -69,7 +69,10 @@ func (candidate *GeminiChatCandidate) ToOpenAIStreamChoice(request *types.ChatCo
 		Delta: types.ChatCompletionStreamChoiceDelta{
 			Role: types.ChatMessageRoleAssistant,
 		},
-		FinishReason: types.FinishReasonStop,
+	}
+
+	if candidate.FinishReason != nil {
+		choice.FinishReason = ConvertFinishReason(*candidate.FinishReason)
 	}
 
 	content := ""
@@ -109,7 +112,11 @@ func (candidate *GeminiChatCandidate) ToOpenAIChoice(request *types.ChatCompleti
 		Message: types.ChatCompletionMessage{
 			Role: "assistant",
 		},
-		FinishReason: types.FinishReasonStop,
+		// FinishReason: types.FinishReasonStop,
+	}
+
+	if candidate.FinishReason != nil {
+		choice.FinishReason = ConvertFinishReason(*candidate.FinishReason)
 	}
 
 	if len(candidate.Content.Parts) == 0 {
@@ -192,9 +199,9 @@ type GeminiCodeExecution struct {
 }
 
 type GeminiChatGenerationConfig struct {
-	Temperature      float64  `json:"temperature,omitempty"`
-	TopP             float64  `json:"topP,omitempty"`
-	TopK             float64  `json:"topK,omitempty"`
+	Temperature      *float64 `json:"temperature,omitempty"`
+	TopP             *float64 `json:"topP,omitempty"`
+	TopK             *float64 `json:"topK,omitempty"`
 	MaxOutputTokens  int      `json:"maxOutputTokens,omitempty"`
 	CandidateCount   int      `json:"candidateCount,omitempty"`
 	StopSequences    []string `json:"stopSequences,omitempty"`
@@ -239,7 +246,7 @@ type GeminiUsageMetadata struct {
 
 type GeminiChatCandidate struct {
 	Content               GeminiChatContent        `json:"content"`
-	FinishReason          string                   `json:"finishReason"`
+	FinishReason          *string                  `json:"finishReason,omitempty"`
 	Index                 int64                    `json:"index"`
 	SafetyRatings         []GeminiChatSafetyRating `json:"safetyRatings"`
 	CitationMetadata      any                      `json:"citationMetadata,omitempty"`
@@ -352,17 +359,6 @@ func OpenAIToGeminiChatContent(openaiContents []types.ChatCompletionMessage) ([]
 	}
 
 	return contents, nil
-}
-
-func ConvertRole(roleName string) string {
-	switch roleName {
-	case types.ChatMessageRoleFunction, types.ChatMessageRoleTool:
-		return types.ChatMessageRoleFunction
-	case types.ChatMessageRoleAssistant:
-		return "model"
-	default:
-		return types.ChatMessageRoleUser
-	}
 }
 
 type ModelListResponse struct {

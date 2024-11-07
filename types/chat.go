@@ -44,10 +44,12 @@ type ChatCompletionToolCalls struct {
 type ChatCompletionMessage struct {
 	Role         string                           `json:"role"`
 	Content      any                              `json:"content,omitempty"`
+	Refusal      string                           `json:"refusal,omitempty"`
 	Name         *string                          `json:"name,omitempty"`
 	FunctionCall *ChatCompletionToolCallsFunction `json:"function_call,omitempty"`
 	ToolCalls    []*ChatCompletionToolCalls       `json:"tool_calls,omitempty"`
 	ToolCallID   string                           `json:"tool_call_id,omitempty"`
+	Audio        any                              `json:"audio,omitempty"`
 }
 
 func (m ChatCompletionMessage) StringContent() string {
@@ -159,9 +161,11 @@ type ChatMessageImageURL struct {
 }
 
 type ChatMessagePart struct {
-	Type     string               `json:"type,omitempty"`
-	Text     string               `json:"text,omitempty"`
-	ImageURL *ChatMessageImageURL `json:"image_url,omitempty"`
+	Type       string               `json:"type,omitempty"`
+	Text       string               `json:"text,omitempty"`
+	ImageURL   *ChatMessageImageURL `json:"image_url,omitempty"`
+	InputAudio any                  `json:"input_audio,omitempty"`
+	Refusal    string               `json:"refusal,omitempty"`
 }
 
 type ChatCompletionResponseFormat struct {
@@ -174,16 +178,16 @@ type ChatCompletionRequest struct {
 	Messages            []ChatCompletionMessage       `json:"messages" binding:"required"`
 	MaxTokens           int                           `json:"max_tokens,omitempty"`
 	MaxCompletionTokens int                           `json:"max_completion_tokens,omitempty"`
-	Temperature         float64                       `json:"temperature,omitempty"`
-	TopP                float64                       `json:"top_p,omitempty"`
-	N                   int                           `json:"n,omitempty"`
+	Temperature         *float64                      `json:"temperature,omitempty"`
+	TopP                *float64                      `json:"top_p,omitempty"`
+	N                   *int                          `json:"n,omitempty"`
 	Stream              bool                          `json:"stream,omitempty"`
 	StreamOptions       *StreamOptions                `json:"stream_options,omitempty"`
-	Stop                []string                      `json:"stop,omitempty"`
-	PresencePenalty     float64                       `json:"presence_penalty,omitempty"`
+	Stop                any                           `json:"stop,omitempty"`
+	PresencePenalty     *float64                      `json:"presence_penalty,omitempty"`
 	ResponseFormat      *ChatCompletionResponseFormat `json:"response_format,omitempty"`
 	Seed                *int                          `json:"seed,omitempty"`
-	FrequencyPenalty    float64                       `json:"frequency_penalty,omitempty"`
+	FrequencyPenalty    *float64                      `json:"frequency_penalty,omitempty"`
 	LogitBias           any                           `json:"logit_bias,omitempty"`
 	LogProbs            *bool                         `json:"logprobs,omitempty"`
 	TopLogProbs         int                           `json:"top_logprobs,omitempty"`
@@ -193,6 +197,8 @@ type ChatCompletionRequest struct {
 	Tools               []*ChatCompletionTool         `json:"tools,omitempty"`
 	ToolChoice          any                           `json:"tool_choice,omitempty"`
 	ParallelToolCalls   bool                          `json:"parallel_tool_calls,omitempty"`
+	Modalities          []string                      `json:"modalities,omitempty"`
+	Audio               *ChatAudio                    `json:"audio,omitempty"`
 }
 
 func (r ChatCompletionRequest) ParseToolChoice() (toolType, toolFunc string) {
@@ -413,4 +419,9 @@ func (c *ChatCompletionStreamResponse) GetResponseText() (responseText string) {
 	}
 
 	return
+}
+
+type ChatAudio struct {
+	Voice  string `json:"voice"`
+	Format string `json:"format"`
 }
