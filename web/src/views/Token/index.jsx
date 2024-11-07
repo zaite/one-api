@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { showError, showSuccess, trims } from 'utils/common';
 
 import Table from '@mui/material/Table';
@@ -21,6 +21,7 @@ import EditeModal from './component/EditModal';
 import { useSelector } from 'react-redux';
 import { ITEMS_PER_PAGE } from 'constants';
 import { useTranslation } from 'react-i18next';
+import { UserContext } from 'contexts/UserContext';
 
 export default function Token() {
   const { t } = useTranslation();
@@ -33,6 +34,8 @@ export default function Token() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [tokens, setTokens] = useState([]);
   const [refreshFlag, setRefreshFlag] = useState(false);
+  const { userGroup, loadUserGroup } = useContext(UserContext);
+  const [userGroupOptions, setUserGroupOptions] = useState([]);
 
   const [openModal, setOpenModal] = useState(false);
   const [editTokenId, setEditTokenId] = useState(0);
@@ -100,6 +103,20 @@ export default function Token() {
   useEffect(() => {
     fetchData(page, rowsPerPage, searchKeyword, order, orderBy);
   }, [page, rowsPerPage, searchKeyword, order, orderBy, refreshFlag]);
+
+  useEffect(() => {
+    loadUserGroup();
+  }, [loadUserGroup]);
+
+  useEffect(() => {
+    let options = [];
+    Object.values(userGroup).forEach((item) => {
+      if (item.public) {
+        options.push({ label: `${item.name} (倍率：${item.ratio})`, value: item.symbol });
+      }
+    });
+    setUserGroupOptions(options);
+  }, [userGroup]);
 
   const manageToken = async (id, action, value) => {
     const url = '/api/token/';
@@ -204,6 +221,7 @@ export default function Token() {
                 onRequestSort={handleSort}
                 headLabel={[
                   { id: 'name', label: t('token_index.name'), disableSort: false },
+                  { id: 'group', label: t('token_index.userGroup'), disableSort: false },
                   { id: 'status', label: t('token_index.status'), disableSort: false },
                   { id: 'used_quota', label: t('token_index.usedQuota'), disableSort: false },
                   { id: 'remain_quota', label: t('token_index.remainingQuota'), disableSort: false },
@@ -220,6 +238,7 @@ export default function Token() {
                     key={row.id}
                     handleOpenModal={handleOpenModal}
                     setModalTokenId={setEditTokenId}
+                    userGroup={userGroup}
                   />
                 ))}
               </TableBody>
@@ -238,7 +257,13 @@ export default function Token() {
           showLastButton
         />
       </Card>
-      <EditeModal open={openModal} onCancel={handleCloseModal} onOk={handleOkModal} tokenId={editTokenId} />
+      <EditeModal
+        open={openModal}
+        onCancel={handleCloseModal}
+        onOk={handleOkModal}
+        tokenId={editTokenId}
+        userGroupOptions={userGroupOptions}
+      />
     </>
   );
 }

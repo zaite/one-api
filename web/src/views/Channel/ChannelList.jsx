@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { showError, showSuccess, showInfo, trims } from 'utils/common';
 
 import { useTheme } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
-import PerfectScrollbar from 'react-perfect-scrollbar';
 import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
@@ -23,6 +22,9 @@ import { ITEMS_PER_PAGE } from 'constants';
 import TableToolBar from './component/TableToolBar';
 import BatchModal from './component/BatchModal';
 import { useTranslation } from 'react-i18next';
+
+import { useBoolean } from 'hooks/use-boolean';
+import ConfirmDialog from 'ui-component/confirm-dialog';
 
 const originalKeyword = {
   type: 0,
@@ -76,6 +78,10 @@ export default function ChannelList() {
   const [channels, setChannels] = useState([]);
   const [refreshFlag, setRefreshFlag] = useState(false);
   const [tags, setTags] = useState([]);
+
+  const confirm = useBoolean();
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmConfirm, setConfirmConfirm] = useState(() => {});
 
   const [groupOptions, setGroupOptions] = useState([]);
   const [toolBarValue, setToolBarValue] = useState(originalKeyword);
@@ -197,6 +203,15 @@ export default function ChannelList() {
     }
     setRefreshFlag(!refreshFlag);
   };
+
+  const handlePopoverOpen = useCallback(
+    (title, onConfirm) => {
+      setConfirmTitle(title);
+      setConfirmConfirm(() => onConfirm);
+      confirm.onTrue();
+    },
+    [confirm]
+  );
 
   // 处理测试所有启用渠道
   const testAllChannels = async () => {
@@ -356,13 +371,22 @@ export default function ChannelList() {
                 <Button onClick={searchChannels} startIcon={<IconSearch width={'18px'} />}>
                   {t('channel_index.search')}
                 </Button>
-                <Button onClick={testAllChannels} startIcon={<IconBrandSpeedtest width={'18px'} />}>
+                <Button
+                  onClick={() => handlePopoverOpen(t('channel_index.testAllChannels'), testAllChannels)}
+                  startIcon={<IconBrandSpeedtest width={'18px'} />}
+                >
                   {t('channel_index.testAllChannels')}
                 </Button>
-                <Button onClick={updateAllChannelsBalance} startIcon={<IconCoinYuan width={'18px'} />}>
+                <Button
+                  onClick={() => handlePopoverOpen(t('channel_index.updateEnabledBalance'), updateAllChannelsBalance)}
+                  startIcon={<IconCoinYuan width={'18px'} />}
+                >
                   {t('channel_index.updateEnabledBalance')}
                 </Button>
-                <Button onClick={deleteAllDisabledChannels} startIcon={<IconTrash width={'18px'} />}>
+                <Button
+                  onClick={() => handlePopoverOpen(t('channel_index.deleteDisabledChannels'), deleteAllDisabledChannels)}
+                  startIcon={<IconTrash width={'18px'} />}
+                >
                   {t('channel_index.deleteDisabledChannels')}
                 </Button>
               </ButtonGroup>
@@ -380,13 +404,19 @@ export default function ChannelList() {
                 <IconButton onClick={searchChannels} size="large">
                   <IconSearch />
                 </IconButton>
-                <IconButton onClick={testAllChannels} size="large">
+                <IconButton onClick={() => handlePopoverOpen(t('channel_index.testAllChannels'), testAllChannels)} size="large">
                   <IconBrandSpeedtest />
                 </IconButton>
-                <IconButton onClick={updateAllChannelsBalance} size="large">
+                <IconButton
+                  onClick={() => handlePopoverOpen(t('channel_index.updateEnabledBalance'), updateAllChannelsBalance)}
+                  size="large"
+                >
                   <IconCoinYuan />
                 </IconButton>
-                <IconButton onClick={deleteAllDisabledChannels} size="large">
+                <IconButton
+                  onClick={() => handlePopoverOpen(t('channel_index.deleteDisabledChannels'), deleteAllDisabledChannels)}
+                  size="large"
+                >
                   <IconTrash />
                 </IconButton>
               </Stack>
@@ -394,43 +424,41 @@ export default function ChannelList() {
           </Container>
         </Toolbar>
         {searching && <LinearProgress />}
-        <PerfectScrollbar component="div">
-          <TableContainer>
-            <Table sx={{ minWidth: 800 }}>
-              <KeywordTableHead
-                order={order}
-                orderBy={orderBy}
-                onRequestSort={handleSort}
-                headLabel={[
-                  { id: 'collapse', label: '', disableSort: true, width: '50px' },
-                  { id: 'id', label: 'ID', disableSort: false, width: '80px' },
-                  { id: 'name', label: t('channel_index.name'), disableSort: false },
-                  { id: 'group', label: t('channel_index.group'), disableSort: true },
-                  { id: 'tag', label: t('channel_index.tags'), disableSort: true },
-                  { id: 'type', label: t('channel_index.type'), disableSort: false },
-                  { id: 'status', label: t('channel_index.status'), disableSort: false },
-                  { id: 'response_time', label: t('channel_index.responseTime'), disableSort: false },
-                  // { id: 'balance', label: '余额', disableSort: false },
-                  { id: 'used', label: t('channel_index.usedBalance'), disableSort: true },
-                  { id: 'priority', label: t('channel_index.priority'), disableSort: false, width: '80px' },
-                  { id: 'weight', label: t('channel_index.weight'), disableSort: false, width: '80px' },
-                  { id: 'action', label: t('channel_index.actions'), disableSort: true }
-                ]}
-              />
-              <TableBody>
-                {channels.map((row) => (
-                  <ChannelTableRow
-                    item={row}
-                    manageChannel={manageChannel}
-                    key={row.id}
-                    handleOpenModal={handleOpenModal}
-                    setModalChannelId={setEditChannelId}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </PerfectScrollbar>
+        <TableContainer>
+          <Table sx={{ minWidth: 800 }}>
+            <KeywordTableHead
+              order={order}
+              orderBy={orderBy}
+              onRequestSort={handleSort}
+              headLabel={[
+                { id: 'collapse', label: '', disableSort: true, width: '50px' },
+                { id: 'id', label: 'ID', disableSort: false, width: '80px' },
+                { id: 'name', label: t('channel_index.name'), disableSort: false },
+                { id: 'group', label: t('channel_index.group'), disableSort: true },
+                { id: 'tag', label: t('channel_index.tags'), disableSort: true },
+                { id: 'type', label: t('channel_index.type'), disableSort: false },
+                { id: 'status', label: t('channel_index.status'), disableSort: false },
+                { id: 'response_time', label: t('channel_index.responseTime'), disableSort: false },
+                // { id: 'balance', label: '余额', disableSort: false },
+                { id: 'used', label: t('channel_index.usedBalance'), disableSort: true },
+                { id: 'priority', label: t('channel_index.priority'), disableSort: false, width: '80px' },
+                { id: 'weight', label: t('channel_index.weight'), disableSort: false, width: '80px' },
+                { id: 'action', label: t('channel_index.actions'), disableSort: true }
+              ]}
+            />
+            <TableBody>
+              {channels.map((row) => (
+                <ChannelTableRow
+                  item={row}
+                  manageChannel={manageChannel}
+                  key={row.id}
+                  handleOpenModal={handleOpenModal}
+                  setModalChannelId={setEditChannelId}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
         <TablePagination
           page={page}
           component="div"
@@ -445,6 +473,24 @@ export default function ChannelList() {
       </Card>
       <EditeModal open={openModal} onCancel={handleCloseModal} onOk={handleOkModal} channelId={editChannelId} groupOptions={groupOptions} />
       <BatchModal open={openBatchModal} setOpen={setOpenBatchModal} />
+
+      <ConfirmDialog
+        open={confirm.value}
+        onClose={confirm.onFalse}
+        title={confirmTitle}
+        content={t('common.execute', { title: confirmTitle })}
+        action={
+          <Button
+            variant="contained"
+            onClick={() => {
+              confirmConfirm();
+              confirm.onFalse();
+            }}
+          >
+            {t('common.executeConfirm')}
+          </Button>
+        }
+      />
     </>
   );
 }

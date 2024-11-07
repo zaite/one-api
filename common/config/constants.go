@@ -9,6 +9,8 @@ import (
 
 var StartTime = time.Now().Unix() // unit: second
 var Version = "v0.0.0"            // this hard coding will be replaced automatically when building, no need to manually change
+var Commit = "unknown"
+var BuildTime = "unknown"
 var SystemName = "One Hub"
 var ServerAddress = "http://localhost:3000"
 var Debug = false
@@ -273,6 +275,7 @@ const (
 	RelayModeAudioTranslation
 	RelayModeSuno
 	RelayModeRerank
+	RelayModeChatRealtime
 )
 
 type ContextKey string

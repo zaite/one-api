@@ -127,14 +127,26 @@ func (p *ZhipuProvider) convertFromChatOpenai(request *types.ChatCompletionReque
 	}
 
 	zhipuRequest := &ZhipuRequest{
-		Model:       request.Model,
-		Messages:    request.Messages,
-		Stream:      request.Stream,
-		Temperature: utils.NumClamp(request.Temperature, 0.01, 0.99),
-		TopP:        utils.NumClamp(request.TopP, 0.01, 0.99),
-		MaxTokens:   request.MaxTokens,
-		Stop:        request.Stop,
-		ToolChoice:  request.ToolChoice,
+		Model:      request.Model,
+		Messages:   request.Messages,
+		Stream:     request.Stream,
+		MaxTokens:  request.MaxTokens,
+		ToolChoice: request.ToolChoice,
+	}
+
+	if request.Temperature != nil {
+		zhipuRequest.Temperature = utils.NumClamp(*request.Temperature, 0.01, 0.99)
+	}
+	if request.TopP != nil {
+		zhipuRequest.TopP = utils.NumClamp(*request.TopP, 0.01, 0.99)
+	}
+
+	if request.Stop != nil {
+		if stop, ok := request.Stop.(string); ok {
+			zhipuRequest.Stop = []string{stop}
+		} else if stop, ok := request.Stop.([]string); ok {
+			zhipuRequest.Stop = stop
+		}
 	}
 
 	// 如果有图片的话，并且是base64编码的图片，需要把前缀去掉
