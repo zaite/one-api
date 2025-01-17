@@ -27,6 +27,7 @@ func SetupDB() {
 	ChannelGroup.Load()
 	GlobalUserGroupRatio.Load()
 	config.RootUserEmail = GetRootUserEmail()
+	NewModelOwnedBys()
 
 	if viper.GetBool("batch_update_enabled") {
 		config.BatchUpdateEnabled = true
@@ -151,10 +152,7 @@ func InitDB() (err error) {
 		if err != nil {
 			return err
 		}
-		err = db.AutoMigrate(&ChatCache{})
-		if err != nil {
-			return err
-		}
+
 		err = db.AutoMigrate(&Payment{})
 		if err != nil {
 			return err
@@ -173,6 +171,11 @@ func InitDB() (err error) {
 		}
 
 		err = db.AutoMigrate(&UserGroup{})
+		if err != nil {
+			return err
+		}
+
+		err = db.AutoMigrate(&ModelOwnedBy{})
 		if err != nil {
 			return err
 		}

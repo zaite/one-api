@@ -17,6 +17,7 @@ import NavigationScroll from 'layout/NavigationScroll';
 // auth
 import UserProvider from 'contexts/UserContext';
 import StatusProvider from 'contexts/StatusContext';
+import { NoticeProvider, NoticeDialogs } from 'ui-component/notice';
 import { SnackbarProvider } from 'notistack';
 import CopySnackbar from 'ui-component/Snackbar';
 
@@ -34,10 +35,6 @@ const App = () => {
     if (storedTheme) {
       dispatch({ type: SET_THEME, theme: storedTheme });
     }
-
-    // 将语言更改移到这里
-    const storedLanguage = localStorage.getItem('appLanguage') || 'zh_CN';
-    i18n.changeLanguage(storedLanguage);
   }, [dispatch]);
 
   return (
@@ -51,13 +48,16 @@ const App = () => {
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
             Components={{ copy: CopySnackbar }}
           >
-            <I18nextProvider i18n={i18n}>
-              <UserProvider>
-                <StatusProvider>
-                  <Routes />
-                </StatusProvider>
-              </UserProvider>
-            </I18nextProvider>
+            <StatusProvider>
+              <I18nextProvider i18n={i18n}>
+                <NoticeProvider>
+                  <UserProvider>
+                    <Routes />
+                    <NoticeDialogs />
+                  </UserProvider>
+                </NoticeProvider>
+              </I18nextProvider>
+            </StatusProvider>
           </SnackbarProvider>
         </NavigationScroll>
       </ThemeProvider>

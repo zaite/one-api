@@ -18,7 +18,6 @@ import (
 	"one-api/cron"
 	"one-api/middleware"
 	"one-api/model"
-	"one-api/relay/relay_util"
 	"one-api/relay/task"
 	"one-api/router"
 	"time"
@@ -44,6 +43,13 @@ func main() {
 
 	logger.SetupLogger()
 	logger.SysLog("One Hub " + config.Version + " started")
+
+	// Initialize user token
+	err := common.InitUserToken()
+	if err != nil {
+		logger.FatalLog("failed to initialize user token: " + err.Error())
+	}
+
 	// Initialize SQL Database
 	model.SetupDB()
 	defer model.CloseDB()
@@ -54,7 +60,9 @@ func main() {
 	model.InitOptionMap()
 	// Initialize oidc
 	oidc.InitOIDCConfig()
-	relay_util.NewPricing()
+	model.NewPricing()
+	model.HandleOldTokenMaxId()
+
 	initMemoryCache()
 	initSync()
 
@@ -132,6 +140,6 @@ func SyncChannelCache(frequency int) {
 		time.Sleep(time.Duration(frequency) * time.Second)
 		logger.SysLog("syncing channels from database")
 		model.ChannelGroup.Load()
-		relay_util.PricingInstance.Init()
+		model.PricingInstance.Init()
 	}
 }

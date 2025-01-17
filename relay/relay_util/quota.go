@@ -42,7 +42,7 @@ func NewQuota(c *gin.Context, modelName string, promptTokens int) *Quota {
 		HandelStatus: false,
 	}
 
-	quota.price = *PricingInstance.GetPrice(quota.modelName)
+	quota.price = *model.PricingInstance.GetPrice(quota.modelName)
 	quota.groupRatio = c.GetFloat64("group_ratio")
 	quota.groupName = c.GetString("token_group")
 	quota.inputRatio = quota.price.GetInput() * quota.groupRatio
@@ -132,18 +132,18 @@ func (q *Quota) completedQuotaConsumption(usage *types.Usage, tokenName string, 
 	}()
 
 	quota := q.GetTotalQuotaByUsage(usage)
-	if quota == 0 {
-		return fmt.Errorf("user_id: %d, channel_id: %d, token_id: %d, quota is 0", q.userId, q.channelId, q.tokenId)
-	}
 
-	quotaDelta := quota - q.preConsumedQuota
-	err := model.PostConsumeTokenQuota(q.tokenId, quotaDelta)
-	if err != nil {
-		return errors.New("error consuming token remain quota: " + err.Error())
-	}
-	err = model.CacheUpdateUserQuota(q.userId)
-	if err != nil {
-		return errors.New("error consuming token remain quota: " + err.Error())
+	if quota > 0 {
+		quotaDelta := quota - q.preConsumedQuota
+		err := model.PostConsumeTokenQuota(q.tokenId, quotaDelta)
+		if err != nil {
+			return errors.New("error consuming token remain quota: " + err.Error())
+		}
+		err = model.CacheUpdateUserQuota(q.userId)
+		if err != nil {
+			return errors.New("error consuming token remain quota: " + err.Error())
+		}
+		model.UpdateChannelUsedQuota(q.channelId, quota)
 	}
 
 	model.RecordConsumeLog(
@@ -161,7 +161,6 @@ func (q *Quota) completedQuotaConsumption(usage *types.Usage, tokenName string, 
 		q.GetLogMeta(usage),
 	)
 	model.UpdateUserUsedQuotaAndRequestCount(q.userId, quota)
-	model.UpdateChannelUsedQuota(q.channelId, quota)
 
 	return nil
 }
@@ -199,8 +198,8 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
 		"group_name":   q.groupName,
 		"price_type":   q.price.Type,
 		"group_ratio":  q.groupRatio,
-		"input_ratio":  q.inputRatio,
-		"output_ratio": q.outputRatio,
+		"input_ratio":  q.price.GetInput(),
+		"output_ratio": q.price.GetOutput(),
 	}
 
 	if usage != nil {
@@ -209,15 +208,18 @@ func (q *Quota) GetLogMeta(usage *types.Usage) map[string]any {
 
 		if promptDetails.CachedTokens != 0 {
 			meta["cached_tokens"] = promptDetails.CachedTokens
+			meta["cached_tokens_ratio"] = q.price.GetExtraRatio("cached_tokens_ratio")
 		}
 		if promptDetails.AudioTokens != 0 {
 			meta["input_audio_tokens"] = promptDetails.AudioTokens
+			meta["input_audio_tokens_ratio"] = q.price.GetExtraRatio("input_audio_tokens_ratio")
 		}
 		if promptDetails.TextTokens != 0 {
 			meta["input_text_tokens"] = promptDetails.TextTokens
 		}
 		if completionDetails.AudioTokens != 0 {
 			meta["output_audio_tokens"] = completionDetails.AudioTokens
+			meta["output_audio_tokens_ratio"] = q.price.GetExtraRatio("output_audio_tokens_ratio")
 		}
 		if completionDetails.TextTokens != 0 {
 			meta["output_text_tokens"] = completionDetails.TextTokens

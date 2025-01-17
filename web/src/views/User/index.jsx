@@ -9,6 +9,7 @@ import TablePagination from '@mui/material/TablePagination';
 import LinearProgress from '@mui/material/LinearProgress';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Toolbar from '@mui/material/Toolbar';
+import { Icon } from '@iconify/react';
 
 import { Button, Card, Box, Stack, Container, Typography } from '@mui/material';
 import UsersTableRow from './component/TableRow';
@@ -16,7 +17,6 @@ import KeywordTableHead from 'ui-component/TableHead';
 import TableToolBar from 'ui-component/TableToolBar';
 import { API } from 'utils/api';
 import { ITEMS_PER_PAGE } from 'constants';
-import { IconRefresh, IconPlus } from '@tabler/icons-react';
 import EditeModal from './component/EditModal';
 
 import { useTranslation } from 'react-i18next';
@@ -100,23 +100,28 @@ export default function Users() {
   }, [page, rowsPerPage, searchKeyword, order, orderBy, refreshFlag]);
 
   const manageUser = async (username, action, value) => {
-    const url = '/api/user/manage';
-    let data = { username: username, action: '' };
+    let url = '/api/user/manage';
+    let valueData = {};
+    // let data = { username: username, action: '' };
     let res;
     switch (action) {
       case 'delete':
-        data.action = 'delete';
+        valueData = { username, action: 'delete' };
         break;
       case 'status':
-        data.action = value === 1 ? 'enable' : 'disable';
+        valueData = { username, action: value === 1 ? 'enable' : 'disable' };
         break;
       case 'role':
-        data.action = value === true ? 'promote' : 'demote';
+        valueData = { username, action: value === true ? 'promote' : 'demote' };
+        break;
+      case 'quota':
+        url = `/api/user/quota/${username}`;
+        valueData = value;
         break;
     }
 
     try {
-      res = await API.post(url, data);
+      res = await API.post(url, valueData);
       const { success, message } = res.data;
       if (success) {
         showSuccess(t('userPage.operationSuccess'));
@@ -153,7 +158,12 @@ export default function Users() {
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
         <Typography variant="h4">{t('userPage.users')}</Typography>
 
-        <Button variant="contained" color="primary" startIcon={<IconPlus />} onClick={() => handleOpenModal(0)}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<Icon icon="solar:add-circle-line-duotone" />}
+          onClick={() => handleOpenModal(0)}
+        >
           {t('userPage.createUser')}
         </Button>
       </Stack>
@@ -172,7 +182,7 @@ export default function Users() {
         >
           <Container>
             <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
-              <Button onClick={handleRefresh} startIcon={<IconRefresh width={'18px'} />}>
+              <Button onClick={handleRefresh} startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>
                 {t('userPage.refresh')}
               </Button>
             </ButtonGroup>

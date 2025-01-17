@@ -34,14 +34,13 @@ const OperationSetting = () => {
     RetryTimes: 0,
     RetryCooldownSeconds: 0,
     MjNotifyEnabled: '',
-    ChatCacheEnabled: '',
-    ChatCacheExpireMinute: 5,
     ChatImageRequestProxy: '',
     PaymentUSDRate: 0,
     PaymentMinAmount: 1,
     RechargeDiscount: '',
     CFWorkerImageUrl: '',
-    CFWorkerImageKey: ''
+    CFWorkerImageKey: '',
+    AudioTokenJson: ''
   });
   const [originInputs, setOriginInputs] = useState({});
   let [loading, setLoading] = useState(false);
@@ -167,9 +166,6 @@ const OperationSetting = () => {
         }
         break;
       case 'other':
-        if (originInputs['ChatCacheExpireMinute'] !== inputs.ChatCacheExpireMinute) {
-          await updateOption('ChatCacheExpireMinute', inputs.ChatCacheExpireMinute);
-        }
         if (originInputs['ChatImageRequestProxy'] !== inputs.ChatImageRequestProxy) {
           await updateOption('ChatImageRequestProxy', inputs.ChatImageRequestProxy);
         }
@@ -196,6 +192,15 @@ const OperationSetting = () => {
             return;
           }
           await updateOption('RechargeDiscount', inputs.RechargeDiscount);
+        }
+        break;
+      case 'AudioTokenJson':
+        if (originInputs.AudioTokenJson !== inputs.AudioTokenJson) {
+          if (!verifyJSON(inputs.AudioTokenJson)) {
+            showError('音频令牌不是合法的 JSON 字符串');
+            return;
+          }
+          await updateOption('AudioTokenJson', inputs.AudioTokenJson);
         }
         break;
     }
@@ -333,27 +338,6 @@ const OperationSetting = () => {
               label={t('setting_index.operationSettings.otherSettings.mjNotify')}
               control={<Checkbox checked={inputs.MjNotifyEnabled === 'true'} onChange={handleInputChange} name="MjNotifyEnabled" />}
             />
-            <FormControlLabel
-              sx={{ marginLeft: '0px' }}
-              label={t('setting_index.operationSettings.otherSettings.chatCache')}
-              control={<Checkbox checked={inputs.ChatCacheEnabled === 'true'} onChange={handleInputChange} name="ChatCacheEnabled" />}
-            />
-          </Stack>
-          <Stack direction={{ sm: 'column', md: 'row' }} spacing={{ xs: 3, sm: 2, md: 4 }}>
-            <FormControl>
-              <InputLabel htmlFor="ChatCacheExpireMinute">
-                {t('setting_index.operationSettings.otherSettings.chatCacheExpireMinute.label')}
-              </InputLabel>
-              <OutlinedInput
-                id="ChatCacheExpireMinute"
-                name="ChatCacheExpireMinute"
-                value={inputs.ChatCacheExpireMinute}
-                onChange={handleInputChange}
-                label={t('setting_index.operationSettings.otherSettings.chatCacheExpireMinute.label')}
-                placeholder={t('setting_index.operationSettings.otherSettings.chatCacheExpireMinute.placeholder')}
-                disabled={loading}
-              />
-            </FormControl>
           </Stack>
           <Stack spacing={2}>
             <Alert severity="info">{t('setting_index.operationSettings.otherSettings.alert')}</Alert>
@@ -665,6 +649,35 @@ const OperationSetting = () => {
               }}
             >
               {t('setting_index.operationSettings.chatLinkSettings.save')}
+            </Button>
+          </Stack>
+        </Stack>
+      </SubCard>
+
+      <SubCard title={t('setting_index.operationSettings.audioTokenSettings.title')}>
+        <Stack spacing={2}>
+          <Stack justifyContent="flex-start" alignItems="flex-start" spacing={2}>
+            <FormControl fullWidth>
+              <TextField
+                multiline
+                maxRows={15}
+                id="audioTokenJson"
+                label={t('setting_index.operationSettings.audioTokenSettings.info')}
+                value={inputs.AudioTokenJson}
+                name="AudioTokenJson"
+                onChange={handleInputChange}
+                minRows={5}
+                placeholder={t('setting_index.operationSettings.audioTokenSettings.info')}
+                disabled={loading}
+              />
+            </FormControl>
+            <Button
+              variant="contained"
+              onClick={() => {
+                submitConfig('AudioTokenJson').then();
+              }}
+            >
+              {t('setting_index.operationSettings.audioTokenSettings.save')}
             </Button>
           </Stack>
         </Stack>

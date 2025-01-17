@@ -6,7 +6,6 @@ import (
 	"one-api/common"
 	"one-api/common/config"
 	"one-api/common/logger"
-	"one-api/model"
 	providersBase "one-api/providers/base"
 	"one-api/types"
 
@@ -15,22 +14,9 @@ import (
 
 func RelayRerank(c *gin.Context) {
 	relay := NewRelayRerank(c)
-	relay.SetChatCache(true)
 
 	if err := relay.setRequest(); err != nil {
 		common.AbortWithErr(c, http.StatusBadRequest, &types.RerankError{Detail: err.Error()})
-		return
-	}
-
-	cacheProps := relay.GetChatCache()
-	cacheProps.SetHash(relay.getRequest())
-
-	// 获取缓存
-	cache := cacheProps.GetCache()
-
-	if cache != nil {
-		// 说明有缓存， 直接返回缓存内容
-		cacheProcessing(c, cache, relay.IsStream())
 		return
 	}
 
@@ -55,7 +41,7 @@ func RelayRerank(c *gin.Context) {
 
 	for i := retryTimes; i > 0; i-- {
 		// 冻结通道
-		model.ChannelGroup.Cooldowns(channel.Id)
+		shouldCooldowns(c, channel, apiErr)
 		if err := relay.setProvider(relay.getOriginalModel()); err != nil {
 			continue
 		}
@@ -122,10 +108,6 @@ func (r *relayRerank) send() (err *types.OpenAIErrorWithStatusCode, done bool) {
 		return
 	}
 	err = responseJsonClient(r.c, response)
-
-	if err == nil {
-		r.cache.SetResponse(response)
-	}
 
 	if err != nil {
 		done = true
