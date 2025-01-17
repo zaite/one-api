@@ -2,15 +2,18 @@ import PropTypes from 'prop-types';
 import { Box, Avatar } from '@mui/material';
 import Card from '@mui/material/Card';
 import userAvatar from 'assets/images/users/user-round.svg';
+import userBackground from 'assets/images/users/background-1.webp';
+import { useSelector } from 'react-redux';
 
 import React from 'react';
 
 export default function UserCard({ children }) {
+  const account = useSelector((state) => state.account);
   return (
     <Card
       sx={{
         position: 'relative',
-        borderRadius: '24px',
+        borderRadius: '16px',
         overflow: 'hidden'
         // bgcolor: 'rgba(22, 28, 36, 0.94)',
         // color: '#fff'
@@ -20,7 +23,9 @@ export default function UserCard({ children }) {
       <Box
         sx={{
           height: '140px',
-          background: 'linear-gradient(135deg, #40c4ff 0%, #7b1fa2 100%)',
+          background: `url(${userBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           opacity: 0.8,
           position: 'relative'
         }}
@@ -42,7 +47,7 @@ export default function UserCard({ children }) {
         }}
       >
         <Avatar
-          src={userAvatar}
+          src={account.user?.avatar_url || userAvatar}
           sx={{
             width: '100%',
             height: '100%'
@@ -51,7 +56,7 @@ export default function UserCard({ children }) {
         />
       </Box>
 
-      {children}
+      <Box sx={{ p: 2 }}>{children}</Box>
     </Card>
   );
 }

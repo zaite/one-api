@@ -66,6 +66,30 @@ func authHelper(c *gin.Context, minRole int) {
 	c.Next()
 }
 
+func TrySetUserBySession() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		session := sessions.Default(c)
+		id := session.Get("id")
+		if id == nil {
+			c.Next()
+			return
+		}
+
+		idInt, ok := id.(int)
+		if !ok {
+			c.Next()
+			return
+		}
+
+		c.Set("id", idInt)
+		userGroup, err := model.CacheGetUserGroup(idInt)
+		if err == nil {
+			c.Set("group", userGroup)
+		}
+		c.Next()
+	}
+}
+
 func UserAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		authHelper(c, config.RoleCommonUser)
@@ -93,27 +117,18 @@ func tokenAuth(c *gin.Context, key string) {
 		return
 	}
 
-	parts := strings.Split(key, "-")
+	parts := strings.Split(key, "#")
 	key = parts[0]
 	token, err := model.ValidateUserToken(key)
 	if err != nil {
 		abortWithMessage(c, http.StatusUnauthorized, err.Error())
 		return
 	}
-	userEnabled, err := model.CacheIsUserEnabled(token.UserId)
-	if err != nil {
-		abortWithMessage(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if !userEnabled {
-		abortWithMessage(c, http.StatusForbidden, "用户已被封禁")
-		return
-	}
+
 	c.Set("id", token.UserId)
 	c.Set("token_id", token.Id)
 	c.Set("token_name", token.Name)
 	c.Set("token_group", token.Group)
-	c.Set("chat_cache", token.ChatCache)
 	if len(parts) > 1 {
 		if model.IsAdmin(token.UserId) {
 			if strings.HasPrefix(parts[1], "!") {
@@ -180,6 +195,21 @@ func GeminiAuth() func(c *gin.Context) {
 
 func MjAuth() func(c *gin.Context) {
 	return func(c *gin.Context) {
+		// 判断path :mode
+		model := c.Param("mode")
+
+		if model != "" && model != "mj-fast" && model != "mj-turbo" && model != "mj-relax" {
+			midjourneyAbortWithMessage(c, 4, "无效的加速模式")
+			return
+		}
+
+		if model == "" {
+			model = "mj-fast"
+		}
+
+		model = strings.TrimPrefix(model, "mj-")
+		c.Set("mj_model", model)
+
 		key := c.Request.Header.Get("mj-api-secret")
 		tokenAuth(c, key)
 	}

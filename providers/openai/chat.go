@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -41,7 +42,7 @@ func (p *OpenAIProvider) CreateChatCompletion(request *types.ChatCompletionReque
 		return nil, errWithCode
 	}
 
-	if response.Usage == nil {
+	if response.Usage == nil || response.Usage.CompletionTokens == 0 {
 		response.Usage = &types.Usage{
 			PromptTokens:     p.Usage.PromptTokens,
 			CompletionTokens: 0,
@@ -94,13 +95,14 @@ func (p *OpenAIProvider) CreateChatCompletionStream(request *types.ChatCompletio
 
 func (h *OpenAIStreamHandler) HandlerChatStream(rawLine *[]byte, dataChan chan string, errChan chan error) {
 	// 如果rawLine 前缀不为data:，则直接返回
-	if !strings.HasPrefix(string(*rawLine), "data: ") {
+	if !strings.HasPrefix(string(*rawLine), "data:") {
 		*rawLine = nil
 		return
 	}
 
 	// 去除前缀
-	*rawLine = (*rawLine)[6:]
+	*rawLine = (*rawLine)[5:]
+	*rawLine = bytes.TrimSpace(*rawLine)
 
 	// 如果等于 DONE 则结束
 	if string(*rawLine) == "[DONE]" {
@@ -123,14 +125,19 @@ func (h *OpenAIStreamHandler) HandlerChatStream(rawLine *[]byte, dataChan chan s
 	}
 
 	if openaiResponse.Usage != nil {
-		*h.Usage = *openaiResponse.Usage
+		if openaiResponse.Usage.CompletionTokens > 0 {
+			*h.Usage = *openaiResponse.Usage
+		}
+
 		if len(openaiResponse.Choices) == 0 {
 			*rawLine = nil
 			return
 		}
 	} else {
 		if len(openaiResponse.Choices) > 0 && openaiResponse.Choices[0].Usage != nil {
-			*h.Usage = *openaiResponse.Choices[0].Usage
+			if openaiResponse.Choices[0].Usage.CompletionTokens > 0 {
+				*h.Usage = *openaiResponse.Choices[0].Usage
+			}
 		} else {
 			if h.Usage.TotalTokens == 0 {
 				h.Usage.TotalTokens = h.Usage.PromptTokens

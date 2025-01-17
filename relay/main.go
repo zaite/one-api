@@ -11,7 +11,6 @@ import (
 	"one-api/model"
 	"one-api/relay/relay_util"
 	"one-api/types"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,18 +24,6 @@ func Relay(c *gin.Context) {
 
 	if err := relay.setRequest(); err != nil {
 		common.AbortWithMessage(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	cacheProps := relay.GetChatCache()
-	cacheProps.SetHash(relay.getRequest())
-
-	// 获取缓存
-	cache := cacheProps.GetCache()
-
-	if cache != nil {
-		// 说明有缓存， 直接返回缓存内容
-		cacheProcessing(c, cache, relay.IsStream())
 		return
 	}
 
@@ -62,7 +49,7 @@ func Relay(c *gin.Context) {
 
 	for i := retryTimes; i > 0; i-- {
 		// 冻结通道
-		shouldCooldowns(c, apiErr, channel.Id)
+		shouldCooldowns(c, channel, apiErr)
 		if err := relay.setProvider(relay.getOriginalModel()); err != nil {
 			continue
 		}
@@ -71,6 +58,7 @@ func Relay(c *gin.Context) {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("using channel #%d(%s) to retry (remain times %d)", channel.Id, channel.Name, i))
 		apiErr, done = RelayHandler(relay)
 		if apiErr == nil {
+			metrics.RecordProvider(c, 200)
 			return
 		}
 		go processChannelRelayError(c.Request.Context(), channel.Id, channel.Name, apiErr, channel.Type)
@@ -80,9 +68,6 @@ func Relay(c *gin.Context) {
 	}
 
 	if apiErr != nil {
-		if apiErr.StatusCode == http.StatusTooManyRequests {
-			apiErr.OpenAIError.Message = "当前分组上游负载已饱和，请稍后再试"
-		}
 		relayResponseWithErr(c, apiErr)
 	}
 }
@@ -115,36 +100,17 @@ func RelayHandler(relay RelayBaseInterface) (err *types.OpenAIErrorWithStatusCod
 	}
 
 	quota.Consume(relay.getContext(), usage, relay.IsStream())
-	if usage.CompletionTokens > 0 {
-		cacheProps := relay.GetChatCache()
-		go cacheProps.StoreCache(relay.getContext().GetInt("channel_id"), usage.PromptTokens, usage.CompletionTokens, relay.getModelName())
-	}
 
 	return
 }
 
-func cacheProcessing(c *gin.Context, cacheProps *relay_util.ChatCacheProps, isStream bool) {
-	responseCache(c, cacheProps.Response, isStream)
+func shouldCooldowns(c *gin.Context, channel *model.Channel, apiErr *types.OpenAIErrorWithStatusCode) {
+	modelName := c.GetString("new_model")
+	channelId := channel.Id
 
-	// 写入日志
-	tokenName := c.GetString("token_name")
-
-	requestTime := 0
-	requestStartTimeValue := c.Request.Context().Value("requestStartTime")
-	if requestStartTimeValue != nil {
-		requestStartTime, ok := requestStartTimeValue.(time.Time)
-		if ok {
-			requestTime = int(time.Since(requestStartTime).Milliseconds())
-		}
-	}
-
-	model.RecordConsumeLog(c.Request.Context(), cacheProps.UserId, cacheProps.ChannelID, cacheProps.PromptTokens, cacheProps.CompletionTokens, cacheProps.ModelName, tokenName, 0, "缓存", requestTime, isStream, nil)
-}
-
-func shouldCooldowns(c *gin.Context, apiErr *types.OpenAIErrorWithStatusCode, channelId int) {
 	// 如果是频率限制，冻结通道
 	if apiErr.StatusCode == http.StatusTooManyRequests {
-		model.ChannelGroup.Cooldowns(channelId)
+		model.ChannelGroup.SetCooldowns(channelId, modelName)
 	}
 
 	skipChannelIds, ok := utils.GetGinValue[[]int](c, "skip_channel_ids")

@@ -24,7 +24,7 @@ import User1 from 'assets/images/users/user-round.svg';
 import useLogin from 'hooks/useLogin';
 
 // assets
-import { IconLogout, IconSettings, IconUserScan } from '@tabler/icons-react';
+import { Icon } from '@iconify/react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +35,7 @@ const ProfileSection = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const customization = useSelector((state) => state.customization);
+  const account = useSelector((state) => state.account);
   const { logout } = useLogin();
 
   const [open, setOpen] = useState(false);
@@ -74,26 +75,25 @@ const ProfileSection = () => {
           alignItems: 'center',
           borderRadius: '27px',
           transition: 'all .2s ease-in-out',
-          borderColor: theme.typography.menuChip.background,
-          backgroundColor: theme.typography.menuChip.background,
+          backgroundColor: 'transparent',
+          border: 'none',
           '&[aria-controls="menu-list-grow"], &:hover': {
-            borderColor: theme.palette.primary.main,
-            background: `${theme.palette.primary.main}!important`,
-            color: theme.palette.primary.light,
+            boxShadow: '0 2px 14px 0 rgb(32 40 45 / 8%)',
+            borderRadius: '50%',
             '& svg': {
               stroke: theme.palette.primary.light
             }
           },
           '& .MuiChip-label': {
-            lineHeight: 0
+            display: 'none'
           }
         }}
         icon={
           <Avatar
-            src={User1}
+            src={account.user?.avatar_url || User1}
             sx={{
               ...theme.typography.mediumAvatar,
-              margin: '8px 0 8px 8px !important',
+              margin: '8px !important',
               cursor: 'pointer'
             }}
             ref={anchorRef}
@@ -102,8 +102,6 @@ const ProfileSection = () => {
             color="inherit"
           />
         }
-        label={<IconSettings stroke={1.5} size="1.5rem" color={theme.palette.primary.main} />}
-        variant="outlined"
         ref={anchorRef}
         aria-controls={open ? 'menu-list-grow' : undefined}
         aria-haspopup="true"
@@ -151,14 +149,14 @@ const ProfileSection = () => {
                   >
                     <ListItemButton sx={{ borderRadius: `${customization.borderRadius}px` }} onClick={() => navigate('/panel/profile')}>
                       <ListItemIcon>
-                        <IconUserScan stroke={1.5} size="1.3rem" />
+                        <Icon icon="solar:user-id-bold-duotone" width="1.3rem" />
                       </ListItemIcon>
                       <ListItemText primary={<Typography variant="body2">{t('setting')}</Typography>} />
                     </ListItemButton>
 
                     <ListItemButton sx={{ borderRadius: `${customization.borderRadius}px` }} onClick={handleLogout}>
                       <ListItemIcon>
-                        <IconLogout stroke={1.5} size="1.3rem" />
+                        <Icon icon="solar:logout-3-bold-duotone" width="1.3rem" />
                       </ListItemIcon>
                       <ListItemText primary={<Typography variant="body2">{t('menu.signout')}</Typography>} />
                     </ListItemButton>
