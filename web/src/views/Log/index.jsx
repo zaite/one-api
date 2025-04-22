@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { showError, trims } from 'utils/common';
 
 import Table from '@mui/material/Table';
@@ -17,13 +17,13 @@ import KeywordTableHead from 'ui-component/TableHead';
 import TableToolBar from './component/TableToolBar';
 import { API } from 'utils/api';
 import { isAdmin } from 'utils/common';
-import { ITEMS_PER_PAGE, PAGE_SIZE_OPTIONS } from 'constants';
+import { PAGE_SIZE_OPTIONS, getPageSize, savePageSize } from 'constants';
 import { Icon } from '@iconify/react';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
-import { UserContext } from 'contexts/UserContext';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { useSelector } from 'react-redux';
 
 export default function Log() {
   const { t } = useTranslation();
@@ -42,13 +42,13 @@ export default function Log() {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('created_at');
-  const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE);
+  const [rowsPerPage, setRowsPerPage] = useState(() => getPageSize('log'));
   const [listCount, setListCount] = useState(0);
   const [searching, setSearching] = useState(false);
   const [toolBarValue, setToolBarValue] = useState(originalKeyword);
   const [searchKeyword, setSearchKeyword] = useState(originalKeyword);
   const [refreshFlag, setRefreshFlag] = useState(false);
-  const { userGroup } = useContext(UserContext);
+  const { userGroup } = useSelector((state) => state.account);
   const theme = useTheme();
   const matchUpMd = useMediaQuery(theme.breakpoints.up('sm'));
 
@@ -116,8 +116,10 @@ export default function Log() {
   };
 
   const handleChangeRowsPerPage = (event) => {
+    const newRowsPerPage = parseInt(event.target.value, 10);
     setPage(0);
-    setRowsPerPage(parseInt(event.target.value, 10));
+    setRowsPerPage(newRowsPerPage);
+    savePageSize('log', newRowsPerPage);
   };
 
   const searchLogs = async () => {
@@ -182,7 +184,12 @@ export default function Log() {
   return (
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-        <Typography variant="h4">{t('logPage.title')}</Typography>
+        <Stack direction="column" spacing={1}>
+          <Typography variant="h2">{t('logPage.title')}</Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Log
+          </Typography>
+        </Stack>
       </Stack>
       <Card>
         <Box component="form" noValidate>
@@ -197,7 +204,7 @@ export default function Log() {
             p: (theme) => theme.spacing(0, 1, 0, 3)
           }}
         >
-          <Container>
+          <Container maxWidth="xl">
             {matchUpMd ? (
               <ButtonGroup variant="outlined" aria-label="outlined small primary button group">
                 <Button onClick={handleRefresh} size="small" startIcon={<Icon icon="solar:refresh-bold-duotone" width={18} />}>

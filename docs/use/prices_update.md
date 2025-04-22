@@ -24,7 +24,9 @@ lastUpdated: true
 
 - [woodchen-ink 维护](https://github.com/MartialBE/one-hub/issues/562#issuecomment-2746243372)
 
-  - 价格连接：<https://aimodels-prices.q58.club/api/prices/rates>
+  - 价格链接(全部)：<https://aimodels-prices.q58.club/api/one_hub/rates>
+  - 价格链接(只含原版供应商,即厂商ID小于1000): <https://aimodels-prices.q58.club/api/one_hub/official-rates> 
+  - 供应商信息: <https://aimodels-prices.q58.club/providers>
 
 需要明确的是，除了项目官方默认提供的供应商列表（`运营 --> 模型归属`）外，即 `id > 1000`的供应商，需要和项目价格表的供应商 id 能够匹配的上才可以正确显示价格。所以你需要同时关注：
 
@@ -32,7 +34,9 @@ lastUpdated: true
 - prices 列表，通过`运营 --> 模型价格`手动维护，或 json 连接更新。
 - Oaklight/onehub_prices 项目提供了 [sync_price.py](https://raw.githubusercontent.com/Oaklight/onehub_prices/refs/heads/master/src/sync_pricing.py) 和 [sync_ownedby.py](https://raw.githubusercontent.com/Oaklight/onehub_prices/refs/heads/master/src/sync_ownedby.py) 两份自动同步脚本。用法见项目[README](https://github.com/Oaklight/onehub_prices?tab=readme-ov-file#%E4%BB%B7%E6%A0%BC%E5%90%8C%E6%AD%A5%E6%8C%87%E5%AF%BC)。
 
+::: tip 说明
+可以使用环境变量`UPDATE_PRICE_SERVICE`设置默认价格更新服务器地址，详见[环境变量](../deployment/env)
+:::
 
 
-**可以使用环境变量`UPDATE_PRICE_SERVICE`设置默认价格服务 **，详见[环境变量](../deployment/env)
 

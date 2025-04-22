@@ -52,6 +52,9 @@ func SetApiRouter(router *gin.Engine) {
 			selfRoute.Use(middleware.UserAuth())
 			{
 				selfRoute.GET("/dashboard", controller.GetUserDashboard)
+				selfRoute.GET("/dashboard/rate", controller.GetRateRealtime)
+				selfRoute.GET("/invoice", controller.GetUserInvoice)
+				selfRoute.GET("/invoice/detail", controller.GetUserInvoiceDetail)
 				selfRoute.GET("/self", controller.GetSelf)
 				selfRoute.PUT("/self", controller.UpdateSelf)
 				// selfRoute.DELETE("/self", controller.DeleteSelf)
@@ -86,6 +89,7 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.PUT("/telegram/reload", controller.ReloadTelegramBot)
 			optionRoute.GET("/telegram/:id", controller.GetTelegramMenu)
 			optionRoute.DELETE("/telegram/:id", controller.DeleteTelegramMenu)
+			optionRoute.GET("/safe_tools", controller.GetSafeTools)
 		}
 
 		modelOwnedByRoute := apiRouter.Group("/model_ownedby")
