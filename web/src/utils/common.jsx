@@ -3,6 +3,7 @@ import { enqueueSnackbar } from 'notistack';
 import { snackbarConstants } from 'constants/SnackbarConstants';
 import { API } from './api';
 import { CHAT_LINKS } from 'constants/chatLinks';
+import { useSelector } from 'react-redux';
 
 export function getSystemName() {
   let system_name = localStorage.getItem('system_name');
@@ -139,10 +140,9 @@ export async function onLarkOAuthClicked(lark_client_id) {
   window.open(`https://open.feishu.cn/open-apis/authen/v1/authorize?redirect_uri=${redirect_uri}&app_id=${lark_client_id}&state=${state}`);
 }
 
-export function isAdmin() {
-  let user = localStorage.getItem('user');
+export function useIsAdmin() {
+  const { user } = useSelector((state) => state.account);
   if (!user) return false;
-  user = JSON.parse(user);
   return user.role >= 10;
 }
 

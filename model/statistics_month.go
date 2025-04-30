@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"one-api/common"
 	"one-api/common/logger"
+	"strings"
 	"time"
 )
 
@@ -50,7 +51,7 @@ type StatisticsMonthDetailSearchParams struct {
 }
 type StatisticsMonthGeneratedHistory struct {
 	ID        int64     `gorm:"primary_key;AUTO_INCREMENT" json:"id"`
-	Date      time.Time `gorm:"primary_key;type:datetime" json:"date"`
+	Date      time.Time `gorm:"primary_key;type:date" json:"date"`
 	Count     int       `json:"count"`
 	CreatedAt int64     `json:"created_time" gorm:"bigint"`
 }
@@ -162,16 +163,16 @@ func InsertStatisticsMonth() error {
 	// 获取上个月的日期
 	lastMonth := time.Now().AddDate(0, -1, 0)
 	date := time.Date(lastMonth.Year(), lastMonth.Month(), 1, 0, 0, 0, 0, time.Local)
+	if IsStatisticsMonthGenerated(date) {
+		logger.SysLog("Statistics month data already generated")
+		return nil
+	}
 	return InsertStatisticsMonthForDate(date)
 }
 
 // InsertStatisticsMonthForDate 生成指定月份的月度账单
 func InsertStatisticsMonthForDate(date time.Time) error {
 	logger.SysLog(fmt.Sprintf("Insert statistics month for date %s", date.Format("2006-01-02")))
-	if IsStatisticsMonthGenerated(date) {
-		logger.SysLog("Statistics month data already generated")
-		return nil
-	}
 	tx := DB.Begin()
 	// 执行SQL
 	sql := generateInsertStatisticsMonthSQL(date)
@@ -207,19 +208,17 @@ func GetUserInvoices(params *StatisticsMonthSearchParams) (*DataResult[Statistic
 	} else if common.UsingSQLite {
 		dateStr = "strftime('%Y-%m-%d', date) as date"
 	}
-	rawSQL := "" +
-		"SELECT " + dateStr + "," +
-		" sum(request_count) as request_count," +
-		" sum(quota) as quota," +
-		" sum(prompt_tokens) as prompt_tokens," +
-		" sum(completion_tokens) as completion_tokens," +
-		" sum(request_time) as request_time" +
-		" FROM statistics_months " +
-		"WHERE user_id = ? " +
-		"GROUP BY date,user_id " +
-		"ORDER BY date DESC " +
-		"LIMIT ? OFFSET ?" +
-		""
+
+	// First, get the total count without pagination
+	countSQL := "SELECT COUNT(DISTINCT date) FROM statistics_months WHERE user_id = ?"
+
+	err := DB.Raw(countSQL, params.UserId).Scan(&count).Error
+	if err != nil {
+		logger.SysLog(fmt.Sprintf("Failed to get total count of user invoices for user %d: %v", params.UserId, err))
+		return &DataResult[StatisticsMonthNoModel]{}, err
+	}
+
+	// Set default pagination values
 	if params.Size == 0 {
 		params.Size = 10
 	}
@@ -227,12 +226,56 @@ func GetUserInvoices(params *StatisticsMonthSearchParams) (*DataResult[Statistic
 		params.Page = 1
 	}
 	offset := (params.Page - 1) * params.Size
-	err := DB.Raw(rawSQL, params.UserId, params.Size, offset).Scan(&statistics).Error
+
+	// Use GORM's query builder for safer SQL construction
+	query := DB.Table("statistics_months").
+		Select(dateStr+", sum(request_count) as request_count, sum(quota) as quota, sum(prompt_tokens) as prompt_tokens, sum(completion_tokens) as completion_tokens, sum(request_time) as request_time").
+		Where("user_id = ?", params.UserId).
+		Group("date, user_id")
+
+	// Define allowed fields for ordering to prevent SQL injection
+	allowedOrderFields := map[string]bool{
+		"date":              true,
+		"request_count":     true,
+		"quota":             true,
+		"prompt_tokens":     true,
+		"completion_tokens": true,
+		"request_time":      true,
+	}
+
+	// Apply ordering with validation
+	orderField := "date" // Default order field
+	orderDir := "DESC"   // Default order direction
+
+	field := strings.TrimSpace(params.Order)
+	if len(field) > 0 {
+		isDesc := strings.HasPrefix(field, "-")
+		if isDesc {
+			field = strings.TrimPrefix(field, "-")
+			orderDir = "DESC"
+		} else {
+			orderDir = "ASC"
+		}
+
+		// Check if the field is in the allowed list
+		if allowedOrderFields[field] {
+			orderField = field
+		}
+	}
+
+	// Apply the validated order
+	query = query.Order(orderField + " " + orderDir)
+
+	// Apply pagination
+	query = query.Limit(params.Size).Offset(offset)
+
+	// Execute the query
+	err = query.Scan(&statistics).Error
 	if err != nil {
 		logger.SysLog(fmt.Sprintf("Failed to get user invoices for user %d", params.UserId))
 		return &DataResult[StatisticsMonthNoModel]{}, err
 	}
-	count = int64(len(statistics))
+
 	return &DataResult[StatisticsMonthNoModel]{
 		Data:       &statistics,
 		Page:       params.Page,

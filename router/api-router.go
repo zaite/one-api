@@ -90,6 +90,8 @@ func SetApiRouter(router *gin.Engine) {
 			optionRoute.GET("/telegram/:id", controller.GetTelegramMenu)
 			optionRoute.DELETE("/telegram/:id", controller.DeleteTelegramMenu)
 			optionRoute.GET("/safe_tools", controller.GetSafeTools)
+			optionRoute.POST("/invoice/gen/:time", controller.GenInvoice)
+			optionRoute.POST("/invoice/update/:time", controller.UpdateInvoice)
 		}
 
 		modelOwnedByRoute := apiRouter.Group("/model_ownedby")

@@ -154,6 +154,7 @@ var ExtraTokenPriceJson = ""
 
 var ChatImageRequestProxy = ""
 
+var GitHubProxy = ""
 var GitHubClientId = ""
 var GitHubClientSecret = ""
 var GitHubOldIdCloseEnabled = false
@@ -201,6 +202,8 @@ var RequestInterval time.Duration
 
 var BatchUpdateEnabled = false
 var BatchUpdateInterval = 5
+
+var MCP_ENABLE = false
 
 // Gemini
 var GeminiAPIEnabled = true
