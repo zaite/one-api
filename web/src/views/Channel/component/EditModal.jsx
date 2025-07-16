@@ -993,7 +993,23 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     )}
                   </FormControl>
                 )}
-
+                {inputPrompt.only_chat && (
+                  <FormControl fullWidth>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          disabled={hasTag}
+                          checked={Boolean(values.only_chat)}
+                          onChange={(event) => {
+                            setFieldValue('only_chat', event.target.checked);
+                          }}
+                        />
+                      }
+                      label={customizeT(inputLabel.only_chat)}
+                    />
+                    <FormHelperText id="helper-tex-only_chat_model-label"> {customizeT(inputPrompt.only_chat)} </FormHelperText>
+                  </FormControl>
+                )}
                 {inputPrompt.pre_cost && (
                   <FormControl fullWidth error={Boolean(touched.pre_cost && errors.pre_cost)} sx={{ ...theme.typography.otherInput }}>
                     <InputLabel htmlFor="channel-pre_cost-label">{customizeT(inputLabel.pre_cost)}</InputLabel>
@@ -1030,21 +1046,21 @@ const EditModal = ({ open, channelId, onCancel, onOk, groupOptions, isTag, model
                     )}
                   </FormControl>
                 )}
-                {inputPrompt.only_chat && (
+                {inputPrompt.compatible_response && (
                   <FormControl fullWidth>
                     <FormControlLabel
                       control={
                         <Switch
                           disabled={hasTag}
-                          checked={Boolean(values.only_chat)}
+                          checked={Boolean(values.compatible_response)}
                           onChange={(event) => {
-                            setFieldValue('only_chat', event.target.checked);
+                            setFieldValue('compatible_response', event.target.checked);
                           }}
                         />
                       }
-                      label={customizeT(inputLabel.only_chat)}
+                      label={customizeT(inputLabel.compatible_response)}
                     />
-                    <FormHelperText id="helper-tex-only_chat_model-label"> {customizeT(inputPrompt.only_chat)} </FormHelperText>
+                    <FormHelperText id="helper-tex-compatible_response-label">{customizeT(inputPrompt.compatible_response)}</FormHelperText>
                   </FormControl>
                 )}
                 {pluginList[values.type] &&
